@@ -6,11 +6,11 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
 
-interface BnbSwap {
+interface IBnbSwap {
     function swapped(address) external returns (uint256);
 }
 
-interface PacocaNFTs {
+interface IPacocaNFTs {
     function mint(address account, uint256 id, uint256 amount, bytes memory data) external;
 
     function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) external;
@@ -20,7 +20,7 @@ interface PacocaNFTs {
     function burnBatch(address account, uint256[] memory ids, uint256[] memory values) external;
 }
 
-interface Pacoca {
+interface IPacoca {
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 }
 
@@ -44,9 +44,9 @@ contract PacocaAirdrop is ERC1155Receiver, Ownable {
     // ---------- CONTRACTS ----------
 
     address public oneInch = 0x11111112542D85B3EF69AE05771c2dCCff4fAa26;
-    BnbSwap public bnbSwap;
-    PacocaNFTs public pacocaNFTs;
-    Pacoca public pacoca;
+    IBnbSwap public bnbSwap;
+    IPacocaNFTs public pacocaNFTs;
+    IPacoca public pacoca;
 
     // ---------- DATA ----------
 
@@ -56,9 +56,9 @@ contract PacocaAirdrop is ERC1155Receiver, Ownable {
     bool public migrationEnabled = true;
 
     constructor(address _bnbSwap, address _pacocaNFTs, address _pacoca) public {
-        bnbSwap = BnbSwap(_bnbSwap);
-        pacocaNFTs = PacocaNFTs(_pacocaNFTs);
-        pacoca = Pacoca(_pacoca);
+        bnbSwap = IBnbSwap(_bnbSwap);
+        pacocaNFTs = IPacocaNFTs(_pacocaNFTs);
+        pacoca = IPacoca(_pacoca);
     }
 
     // ---------- EXECUTE SWAPS ----------
