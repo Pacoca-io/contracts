@@ -6,5 +6,8 @@
         "chai": "^4.3.4",
         "ethereum-waffle": "^3.3.0",
         "ethers": "^5.1.4"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "3.4.1"
     }
 }

@@ -1,2 +1,6 @@
 node_modules
 .idea
+
+# Hardhat generated files
+cache
+artifacts
