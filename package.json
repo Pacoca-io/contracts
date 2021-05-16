@@ -11,6 +11,7 @@
         "ethers": "^5.1.4"
     },
     "dependencies": {
-        "@openzeppelin/contracts": "3.4.1"
+        "@openzeppelin/contracts": "3.4.1",
+        "@pancakeswap/pancake-swap-lib": "^0.0.4"
     }
 }
