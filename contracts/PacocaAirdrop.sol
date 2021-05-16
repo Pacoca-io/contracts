@@ -43,7 +43,7 @@ contract PacocaAirdrop is ERC1155Receiver, Ownable {
 
     // ---------- CONTRACTS ----------
 
-    address public oneInch = 0x11111112542D85B3EF69AE05771c2dCCff4fAa26;
+    address public oneInch;
     IBnbSwap public bnbSwap;
     IPacocaNFTs public pacocaNFTs;
     IPacoca public pacoca;
@@ -55,7 +55,8 @@ contract PacocaAirdrop is ERC1155Receiver, Ownable {
     bool public tokenClaimEnabled = false;
     bool public migrationEnabled = true;
 
-    constructor(address _bnbSwap, address _pacocaNFTs, address _pacoca) public {
+    constructor(address _oneInch, address _bnbSwap, address _pacocaNFTs, address _pacoca) public {
+        oneInch = _oneInch;
         bnbSwap = IBnbSwap(_bnbSwap);
         pacocaNFTs = IPacocaNFTs(_pacocaNFTs);
         pacoca = IPacoca(_pacoca);
