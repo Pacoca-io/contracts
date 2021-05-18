@@ -7,7 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./SushiToken.sol";
+
+import "./Pacoca.sol";
+import "hardhat/console.sol";
 
 // MasterChef is the master of Sushi. He can make Sushi and he is a fair guy.
 //
@@ -43,20 +45,16 @@ contract MasterChef is Ownable {
         uint256 accSushiPerShare; // Accumulated SUSHIs per share, times 1e12. See below.
     }
     // The SUSHI TOKEN!
-    SushiToken public sushi;
+    Pacoca public sushi;
     // Dev address.
     address public devaddr;
-    // Block number when bonus SUSHI period ends.
-    uint256 public bonusEndBlock;
     // SUSHI tokens created per block.
     uint256 public sushiPerBlock;
-    // Bonus muliplier for early sushi makers.
-    uint256 public constant BONUS_MULTIPLIER = 10;
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
-    mapping (uint256 => mapping (address => UserInfo)) public userInfo;
+    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     // The block number when SUSHI mining starts.
@@ -67,16 +65,14 @@ contract MasterChef is Ownable {
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
     constructor(
-        SushiToken _sushi,
+        Pacoca _sushi,
         address _devaddr,
         uint256 _sushiPerBlock,
-        uint256 _startBlock,
-        uint256 _bonusEndBlock
+        uint256 _startBlock
     ) public {
         sushi = _sushi;
         devaddr = _devaddr;
         sushiPerBlock = _sushiPerBlock;
-        bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
     }
 
@@ -118,16 +114,11 @@ contract MasterChef is Ownable {
 
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
-        } else {
-            return
-            bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                _to.sub(bonusEndBlock)
-            );
+        if (sushi.totalSupply() >= sushi.maxSupply()) {
+            return 0;
         }
+
+        return _to.sub(_from);
     }
 
     // View function to see pending SUSHIs on frontend.
