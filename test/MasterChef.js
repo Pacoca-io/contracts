@@ -32,7 +32,6 @@ describe('MasterChef Contract', () => {
         MasterChef = await ethers.getContractFactory('MasterChef')
         masterChef = await MasterChef.deploy(
             pacoca.address,
-            dev.address,
             hex(pacocaPerBlock * Math.pow(10, 18)),
             hex(20),
         )

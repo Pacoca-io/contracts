@@ -46,8 +46,6 @@ contract MasterChef is Ownable {
     }
     // The SUSHI TOKEN!
     Pacoca public sushi;
-    // Dev address.
-    address public devaddr;
     // SUSHI tokens created per block.
     uint256 public sushiPerBlock;
 
@@ -66,12 +64,10 @@ contract MasterChef is Ownable {
 
     constructor(
         Pacoca _sushi,
-        address _devaddr,
         uint256 _sushiPerBlock,
         uint256 _startBlock
     ) public {
         sushi = _sushi;
-        devaddr = _devaddr;
         sushiPerBlock = _sushiPerBlock;
         startBlock = _startBlock;
     }
@@ -222,11 +218,5 @@ contract MasterChef is Ownable {
         } else {
             sushi.transfer(_to, _amount);
         }
-    }
-
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
     }
 }
