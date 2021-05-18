@@ -83,4 +83,33 @@ contract TokenAllocation is Ownable {
         allocations[4].used += amount;
         pacoca.transfer(msg.sender, amount);
     }
+
+    // ---------- Non-vested Funds ----------
+
+    function _sendAllocatedFunds(address _to, uint256 _amount, uint8 _allocationIndex) private {
+        Allocation storage allocation = allocations[_allocationIndex];
+
+        uint256 availableFunds = allocation.total.sub(allocation.used);
+
+        require(_amount <= availableFunds, "TokenAllocation: Requested amount not available");
+
+        allocation.used += _amount;
+        pacoca.transfer(_to, _amount);
+    }
+
+    function sendPartnerFarmingFunds(address _to, uint256 _amount) public onlyOwner {
+        _sendAllocatedFunds(_to, _amount, 0);
+    }
+
+    function sendICOFunds(address _to, uint256 _amount) public onlyOwner {
+        _sendAllocatedFunds(_to, _amount, 2);
+    }
+
+    function sendAirdropFunds(address _to, uint256 _amount) public onlyOwner {
+        _sendAllocatedFunds(_to, _amount, 3);
+    }
+
+    function sendInitialLiquidityFunds(address _to, uint256 _amount) public onlyOwner {
+        _sendAllocatedFunds(_to, _amount, 5);
+    }
 }
