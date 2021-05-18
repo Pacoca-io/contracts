@@ -20,8 +20,6 @@ contract Pacoca is ERC20("pacoca.io", "PACOCA"), Ownable {
 
         _mint(_to, amount);
 
-        console.log("sushi %s, original %s", amount, _amount);
-
         return amount;
     }
 }

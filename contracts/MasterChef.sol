@@ -166,8 +166,6 @@ contract MasterChef is Ownable {
         uint256 sushiReward = multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
         uint256 mintedSushi = sushi.mint(address(this), sushiReward);
 
-        console.log("chef %s", mintedSushi);
-
         pool.accSushiPerShare = pool.accSushiPerShare.add(
             mintedSushi.mul(1e12).div(lpSupply)
         );
