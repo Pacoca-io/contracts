@@ -2,17 +2,17 @@
 
 pragma solidity 0.6.12;
 
-import "./helpers/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./libraries/Address.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
-import "./libraries/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./libraries/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
-import "./helpers/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./helpers/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 abstract contract AUTOToken is ERC20 {
     function mint(address _to, uint256 _amount) public virtual;
@@ -30,14 +30,16 @@ interface IStrategy {
     function earn() external;
 
     // Transfer want tokens autoFarm -> strategy
-    function deposit(address _userAddress, uint256 _wantAmt)
-    external
-    returns (uint256);
+    function deposit(
+        address _userAddress,
+        uint256 _wantAmt
+    ) external returns (uint256);
 
     // Transfer want tokens strategy -> autoFarm
-    function withdraw(address _userAddress, uint256 _wantAmt)
-    external
-    returns (uint256);
+    function withdraw(
+        address _userAddress,
+        uint256 _wantAmt
+    ) external returns (uint256);
 
     function inCaseTokensGetStuck(
         address _token,
