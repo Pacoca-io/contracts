@@ -82,7 +82,7 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
 
     address public burnAddress = 0x000000000000000000000000000000000000dEaD;
 
-    uint256 public ownerAUTOReward = 150; // 12%
+    uint256 public ownerAUTOReward = 150; // 15%
 
     uint256 public maxSupply = 100000000e18;
     uint256 public PACOCAPerBlock = 2e18; // AUTO tokens created per block
@@ -104,53 +104,8 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
         return poolInfo.length;
     }
 
-    // Add a new lp to the pool. Can only be called by the owner.
-    // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do. (Only if want tokens are stored here.)
-
-    function add(
-        uint256 _allocPoint,
-        IERC20 _want,
-        bool _withUpdate,
-        address _strat
-    ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-        uint256 lastRewardBlock =
-        block.number > startBlock ? block.number : startBlock;
-        totalAllocPoint = totalAllocPoint.add(_allocPoint);
-        poolInfo.push(
-            PoolInfo({
-        want: _want,
-        allocPoint: _allocPoint,
-        lastRewardBlock: lastRewardBlock,
-        accAUTOPerShare: 0,
-        strat: _strat
-        })
-        );
-    }
-
-    // Update the given pool's AUTO allocation point. Can only be called by the owner.
-    function set(
-        uint256 _pid,
-        uint256 _allocPoint,
-        bool _withUpdate
-    ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
-            _allocPoint
-        );
-        poolInfo[_pid].allocPoint = _allocPoint;
-    }
-
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to)
-    public
-    view
-    returns (uint256)
-    {
+    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (IERC20(AUTOv2).totalSupply() >= maxSupply) {
             return 0;
         }
@@ -339,6 +294,58 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
         } else {
             IERC20(AUTOv2).transfer(_to, _AUTOAmt);
         }
+    }
+
+    /*
+        Governance functions
+    */
+
+    // Add a new lp to the pool. Can only be called by the owner.
+    // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do. (Only if want tokens are stored here.)
+    function add(
+        uint256 _allocPoint,
+        IERC20 _want,
+        bool _withUpdate,
+        address _strat
+    ) public onlyOwner {
+        if (_withUpdate) {
+            massUpdatePools();
+        }
+        uint256 lastRewardBlock =
+        block.number > startBlock ? block.number : startBlock;
+        totalAllocPoint = totalAllocPoint.add(_allocPoint);
+        poolInfo.push(
+            PoolInfo({
+        want: _want,
+        allocPoint: _allocPoint,
+        lastRewardBlock: lastRewardBlock,
+        accAUTOPerShare: 0,
+        strat: _strat
+        })
+        );
+    }
+
+    // Update the given pool's AUTO allocation point. Can only be called by the owner.
+    function set(
+        uint256 _pid,
+        uint256 _allocPoint,
+        bool _withUpdate
+    ) public onlyOwner {
+        if (_withUpdate) {
+            massUpdatePools();
+        }
+        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
+            _allocPoint
+        );
+        poolInfo[_pid].allocPoint = _allocPoint;
+    }
+
+    function setMaxSupply(uint256 _maxSupply) public onlyOwner {
+        maxSupply = _maxSupply;
+    }
+
+    function setPacocaPerBlock(uint256 _PACOCAPerBlock) public onlyOwner {
+        PACOCAPerBlock = _PACOCAPerBlock;
     }
 
     function inCaseTokensGetStuck(address _token, uint256 _amount) public onlyOwner {
