@@ -41,7 +41,7 @@ interface IStrategy {
     ) external;
 }
 
-contract AutoFarmV2 is Ownable, ReentrancyGuard {
+contract PacocaFarm is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -71,11 +71,11 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
         address strat; // Strategy address that will auto compound want tokens
     }
 
-    address public AUTOv2 = 0xa184088a740c695E156F91f5cC086a06bb78b827;
+    address public AUTOv2;
 
     address public burnAddress = 0x000000000000000000000000000000000000dEaD;
 
-    uint256 public ownerAUTOReward = 150; // 15%
+    uint256 public ownerAUTOReward = 200; // 15% Dev + 5% MKT
 
     uint256 public maxSupply = 100000000e18;
     uint256 public PACOCAPerBlock = 2e18; // AUTO tokens created per block
@@ -92,6 +92,10 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
         uint256 indexed pid,
         uint256 amount
     );
+
+    constructor(address _pacoca) public {
+        AUTOv2 = _pacoca;
+    }
 
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
