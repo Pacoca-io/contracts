@@ -2,20 +2,15 @@
 
 pragma solidity 0.6.12;
 
-import "./helpers/ERC20.sol";
-
-import "./libraries/Address.sol";
-
-import "./libraries/SafeERC20.sol";
-
-import "./libraries/EnumerableSet.sol";
-
-import "./helpers/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "./interfaces/IPancakeswapFarm.sol";
-
-import "./interfaces/IPancakeRouter01.sol";
-
 import "./interfaces/IPancakeRouter02.sol";
 
 interface IWBNB is IERC20 {
@@ -23,10 +18,6 @@ interface IWBNB is IERC20 {
 
     function withdraw(uint256 wad) external;
 }
-
-import "./helpers/ReentrancyGuard.sol";
-
-import "./helpers/Pausable.sol";
 
 abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     // Maximises yields in pancakeswap
