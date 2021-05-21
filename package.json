@@ -2,7 +2,8 @@
     "name": "pacoca-io",
     "scripts": {
         "test": "npx hardhat test",
-        "build": "npx hardhat compile"
+        "build": "npx hardhat compile",
+        "deploy:local": "npx hardhat run --network localhost scripts/deploy.js"
     },
     "devDependencies": {
         "@nomiclabs/hardhat-ethers": "^2.0.2",
