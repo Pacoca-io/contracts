@@ -297,7 +297,9 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
     }
 
     /*
-        Governance functions
+        ------------------------------------
+                Governance functions
+        ------------------------------------
     */
 
     // Add a new lp to the pool. Can only be called by the owner.
