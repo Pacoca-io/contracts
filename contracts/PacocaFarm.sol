@@ -14,7 +14,6 @@ import "./helpers/Ownable.sol";
 
 import "./helpers/ReentrancyGuard.sol";
 
-// import "./AUTOToken.sol";
 abstract contract AUTOToken is ERC20 {
     function mint(address _to, uint256 _amount) public virtual;
 }
@@ -77,7 +76,6 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
         address strat; // Strategy address that will auto compound want tokens
     }
 
-    address public AUTO = 0x4508ABB72232271e452258530D4Ed799C685eccb; // 1:1 migration to AUTOv2
     address public AUTOv2 = 0xa184088a740c695E156F91f5cC086a06bb78b827;
 
     address public burnAddress = 0x000000000000000000000000000000000000dEaD;
@@ -158,11 +156,7 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
     }
 
     // View function to see pending AUTO on frontend.
-    function pendingAUTO(uint256 _pid, address _user)
-    external
-    view
-    returns (uint256)
-    {
+    function pendingAUTO(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accAUTOPerShare = pool.accAUTOPerShare;
@@ -182,11 +176,7 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
     }
 
     // View function to see staked Want tokens on frontend.
-    function stakedWantTokens(uint256 _pid, address _user)
-    external
-    view
-    returns (uint256)
-    {
+    function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
 
@@ -350,23 +340,8 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
         }
     }
 
-    function inCaseTokensGetStuck(address _token, uint256 _amount)
-    public
-    onlyOwner
-    {
+    function inCaseTokensGetStuck(address _token, uint256 _amount) public onlyOwner {
         require(_token != AUTOv2, "!safe");
         IERC20(_token).safeTransfer(msg.sender, _amount);
-    }
-
-    function migrateToAUTOv2(uint256 _inputAmt) public {
-        require(block.number < 5033333, "too late :("); // 20 Feb 2021 - https://bscscan.com/block/countdown/5033333
-        IERC20(AUTO).safeIncreaseAllowance(burnAddress, _inputAmt);
-        IERC20(AUTO).safeTransferFrom(
-            address(msg.sender),
-            burnAddress,
-            _inputAmt
-        );
-
-        AUTOToken(AUTOv2).mint(msg.sender, _inputAmt);
     }
 }
