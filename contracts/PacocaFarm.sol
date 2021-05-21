@@ -82,11 +82,11 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
 
     address public burnAddress = 0x000000000000000000000000000000000000dEaD;
 
-    uint256 public ownerAUTOReward = 138; // 12%
+    uint256 public ownerAUTOReward = 150; // 12%
 
-    uint256 public AUTOMaxSupply = 80000e18;
-    uint256 public AUTOPerBlock = 8000000000000000; // AUTO tokens created per block
-    uint256 public startBlock = 3888888; //https://bscscan.com/block/countdown/3888888
+    uint256 public maxSupply = 100000000e18;
+    uint256 public PACOCAPerBlock = 2e18; // AUTO tokens created per block
+    uint256 public startBlock = 3888888; // https://bscscan.com/block/countdown/3888888
 
     PoolInfo[] public poolInfo; // Info of each pool.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
@@ -151,7 +151,7 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
     view
     returns (uint256)
     {
-        if (IERC20(AUTOv2).totalSupply() >= AUTOMaxSupply) {
+        if (IERC20(AUTOv2).totalSupply() >= maxSupply) {
             return 0;
         }
         return _to.sub(_from);
@@ -167,7 +167,7 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
             uint256 multiplier =
             getMultiplier(pool.lastRewardBlock, block.number);
             uint256 AUTOReward =
-            multiplier.mul(AUTOPerBlock).mul(pool.allocPoint).div(
+            multiplier.mul(PACOCAPerBlock).mul(pool.allocPoint).div(
                 totalAllocPoint
             );
             accAUTOPerShare = accAUTOPerShare.add(
@@ -214,8 +214,7 @@ contract AutoFarmV2 is Ownable, ReentrancyGuard {
         if (multiplier <= 0) {
             return;
         }
-        uint256 AUTOReward =
-        multiplier.mul(AUTOPerBlock).mul(pool.allocPoint).div(
+        uint256 AUTOReward = multiplier.mul(PACOCAPerBlock).mul(pool.allocPoint).div(
             totalAllocPoint
         );
 
