@@ -1,7 +1,8 @@
 {
     "name": "pacoca-io",
     "scripts": {
-        "test": "npx hardhat test"
+        "test": "npx hardhat test",
+        "build": "npx hardhat compile"
     },
     "devDependencies": {
         "@nomiclabs/hardhat-ethers": "^2.0.2",
