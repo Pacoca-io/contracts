@@ -38,11 +38,7 @@ module.exports = ({ owner, pacocaFarm, pacoca, wantAddress, token0Address, token
             burn,
         ],
 
-        earnedToAUTOPath: [
-            brew,
-            wbnb,
-            pacoca,
-        ],
+        earnedToAUTOPath: [brew, wbnb, pacoca],
 
         earnedToToken0Path: getEarnedToTokenPath(token0Address),
         earnedToToken1Path: getEarnedToTokenPath(token1Address),

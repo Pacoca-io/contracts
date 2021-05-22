@@ -15,16 +15,34 @@ async function main() {
     const PacocaFarm = await ethers.getContractFactory('PacocaFarm')
     const pacocaFarm = await PacocaFarm.deploy(pacoca.address)
 
-    await pacoca.transferOwnership(pacocaFarm.address)
-
-    console.log(cafeStratSetup({
+    const brewBnbStrat = cafeStratSetup({
         owner: (await ethers.getSigners())[0].address,
         pacocaFarm: pacocaFarm.address,
         pacoca: pacoca.address,
         wantAddress: brewBnbFarm.lpAddress,
         token0Address: brewBnbFarm.token0,
         token1Address: brewBnbFarm.token1,
-    }))
+    })
+
+    const StratX2_CAFE = await ethers.getContractFactory('StratX2_CAFE')
+    await StratX2_CAFE.deploy(
+        brewBnbStrat.addresses,
+        brewBnbFarm.pid,
+        false,
+        false,
+        true,
+        brewBnbStrat.earnedToAUTOPath,
+        brewBnbStrat.earnedToToken0Path,
+        brewBnbStrat.earnedToToken1Path,
+        brewBnbStrat.token0ToEarnedPath,
+        brewBnbStrat.token1ToEarnedPath,
+        190,
+        150,
+        9990,
+        10000,
+    )
+
+    await pacoca.transferOwnership(pacocaFarm.address)
 }
 
 main()

@@ -3,6 +3,7 @@
     "scripts": {
         "test": "npx hardhat test",
         "build": "npx hardhat compile",
+        "node": "npx hardhat node",
         "deploy:local": "npx hardhat run --network localhost scripts/deploy.js"
     },
     "devDependencies": {
