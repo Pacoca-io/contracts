@@ -91,14 +91,10 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     }
 
     // Receives new deposits from user
-    function deposit(address _userAddress, uint256 _wantAmt)
-    public
-    virtual
-    onlyOwner
-    nonReentrant
-    whenNotPaused
-    returns (uint256)
-    {
+    function deposit(
+        address _userAddress,
+        uint256 _wantAmt
+    ) public virtual onlyOwner nonReentrant whenNotPaused returns (uint256) {
         IERC20(wantAddress).safeTransferFrom(
             address(msg.sender),
             address(this),
@@ -149,13 +145,10 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function withdraw(address _userAddress, uint256 _wantAmt)
-    public
-    virtual
-    onlyOwner
-    nonReentrant
-    returns (uint256)
-    {
+    function withdraw(
+        address _userAddress,
+        uint256 _wantAmt
+    ) public virtual onlyOwner nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt <= 0");
 
         uint256 sharesRemoved = _wantAmt.mul(sharesTotal).div(wantLockedTotal);
@@ -196,6 +189,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
 
     function earn() public virtual nonReentrant whenNotPaused {
         require(isAutoComp, "!isAutoComp");
+
         if (onlyGov) {
             require(msg.sender == govAddress, "!gov");
         }
