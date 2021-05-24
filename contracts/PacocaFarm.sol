@@ -13,7 +13,7 @@ abstract contract AUTOToken is ERC20 {
 
 // For interacting with our own strategy
 interface IStrategy {
-    // Total want tokens managed by stratfegy
+    // Total want tokens managed by strategy
     function wantLockedTotal() external view returns (uint256);
 
     // Sum of all shares of users to wantLockedTotal
@@ -350,5 +350,10 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
     function inCaseTokensGetStuck(address _token, uint256 _amount) public onlyOwner {
         require(_token != AUTOv2, "!safe");
         IERC20(_token).safeTransfer(msg.sender, _amount);
+    }
+
+    // Mint function is here to send tokens for farming at partner projects
+    function mint(address _to, uint256 _amount) public onlyOwner {
+        AUTOToken(AUTOv2).mint(_to, _amount);
     }
 }
