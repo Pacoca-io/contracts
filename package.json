@@ -4,7 +4,8 @@
         "test": "npx hardhat test",
         "build": "npx hardhat compile",
         "node": "npx hardhat node",
-        "deploy:local": "npx hardhat run --network localhost scripts/deploy.js"
+        "deploy:local": "npx hardhat run --network localhost scripts/deploy.js",
+        "deploy:bsc": "npx hardhat run --network bsc scripts/deploy.js"
     },
     "devDependencies": {
         "@nomiclabs/hardhat-ethers": "^2.0.2",
@@ -15,6 +16,6 @@
     },
     "dependencies": {
         "@openzeppelin/contracts": "3.4.1",
-        "@pancakeswap/pancake-swap-lib": "^0.0.4"
+        "dotenv": "^10.0.0"
     }
 }
