@@ -424,29 +424,23 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         emit SetOnlyGov(_onlyGov);
     }
 
-    function setUniRouterAddress(address _uniRouterAddress)
-    public
-    virtual
-    onlyAllowGov
-    {
+    function setUniRouterAddress(
+        address _uniRouterAddress
+    ) public virtual onlyAllowGov {
         uniRouterAddress = _uniRouterAddress;
         emit SetUniRouterAddress(_uniRouterAddress);
     }
 
-    function setBuyBackAddress(address _buyBackAddress)
-    public
-    virtual
-    onlyAllowGov
-    {
+    function setBuyBackAddress(
+        address _buyBackAddress
+    ) public virtual onlyAllowGov {
         buyBackAddress = _buyBackAddress;
         emit SetBuyBackAddress(_buyBackAddress);
     }
 
-    function setRewardsAddress(address _rewardsAddress)
-    public
-    virtual
-    onlyAllowGov
-    {
+    function setRewardsAddress(
+        address _rewardsAddress
+    ) public virtual onlyAllowGov {
         rewardsAddress = _rewardsAddress;
         emit SetRewardsAddress(_rewardsAddress);
     }
