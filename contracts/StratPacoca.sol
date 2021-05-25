@@ -40,13 +40,13 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
     }
 
     // Main want token compounding function
-    function earn() public {}
+    function earn() external {}
 
     // Transfer want tokens pacocaFarm -> strategy
     function deposit(
         address _userAddress,
         uint256 _wantAmt
-    ) public virtual onlyOwner nonReentrant whenNotPaused returns (uint256) {
+    ) external virtual onlyOwner nonReentrant whenNotPaused returns (uint256) {
         IERC20(wantAddress).safeTransferFrom(
             address(msg.sender),
             address(this),
@@ -74,7 +74,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
     function withdraw(
         address _userAddress,
         uint256 _wantAmt
-    ) public virtual onlyOwner nonReentrant returns (uint256) {
+    ) external virtual onlyOwner nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt <= 0");
 
         uint256 sharesRemoved = _wantAmt.mul(sharesTotal).div(wantLockedTotal);
@@ -112,7 +112,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
         address _token,
         uint256 _amount,
         address _to
-    ) public virtual onlyAllowGov {
+    ) external virtual onlyAllowGov {
         require(_token != wantAddress, "!safe");
         IERC20(_token).safeTransfer(_to, _amount);
     }
@@ -120,7 +120,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
     function setSettings(
         uint256 _entranceFeeFactor,
         uint256 _withdrawFeeFactor
-    ) public virtual onlyAllowGov {
+    ) external virtual onlyAllowGov {
         require(
             _entranceFeeFactor >= entranceFeeFactorLL,
             "_entranceFeeFactor too low"
