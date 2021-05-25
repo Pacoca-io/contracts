@@ -76,12 +76,12 @@ describe('PacocaStrat Contract', () => {
 
             // Bob's Balance
             // 11 x full block rewards + 1/2 block reward
-            expect(await pacocaFarm.pendingAUTO(0, bob.address)).to.equal(toEther(11 * 2 + 1))
+            expect(await pacocaFarm.pendingPACOCA(0, bob.address)).to.equal(toEther(11 * 2 + 1))
             expect(await pacocaFarm.stakedWantTokens(0, bob.address)).to.equal(toEther(1))
 
             // Alice's Balance
             // 1/2 block reward
-            expect(await pacocaFarm.pendingAUTO(0, alice.address)).to.equal(toEther(1))
+            expect(await pacocaFarm.pendingPACOCA(0, alice.address)).to.equal(toEther(1))
             expect(await pacocaFarm.stakedWantTokens(0, alice.address)).to.equal(toEther(1))
 
             // Withdraw deposits
@@ -90,12 +90,12 @@ describe('PacocaStrat Contract', () => {
 
             // Bob's Balance
             // 11 x full block rewards + 2 x 1/2 block reward
-            expect(await pacocaFarm.pendingAUTO(0, bob.address)).to.equal(toEther(0))
+            expect(await pacocaFarm.pendingPACOCA(0, bob.address)).to.equal(toEther(0))
             expect(await pacoca.balanceOf(bob.address)).to.equal(toEther(10 + 11 * 2 + 2))
 
             // Alice's Balance
             // 2 x 1/2 block reward + 1 full block
-            expect(await pacocaFarm.pendingAUTO(0, alice.address)).to.equal(toEther(0))
+            expect(await pacocaFarm.pendingPACOCA(0, alice.address)).to.equal(toEther(0))
             expect(await pacoca.balanceOf(alice.address)).to.equal(toEther(10 + 2 + 2))
         })
     })

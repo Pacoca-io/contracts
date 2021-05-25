@@ -42,7 +42,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
     // Main want token compounding function
     function earn() public {}
 
-    // Transfer want tokens autoFarm -> strategy
+    // Transfer want tokens pacocaFarm -> strategy
     function deposit(
         address _userAddress,
         uint256 _wantAmt
@@ -70,7 +70,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
         return sharesAdded;
     }
 
-    // Transfer want tokens strategy -> autoFarm
+    // Transfer want tokens strategy -> pacocaFarm
     function withdraw(
         address _userAddress,
         uint256 _wantAmt
