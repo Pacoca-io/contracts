@@ -301,13 +301,10 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     }
 
     function distributeFees(uint256 _earnedAmt) internal virtual returns (uint256) {
-        if (_earnedAmt > 0) {
-            // Performance fee
-            if (controllerFee > 0) {
-                uint256 fee = _earnedAmt.mul(controllerFee).div(controllerFeeMax);
-                IERC20(earnedAddress).safeTransfer(rewardsAddress, fee);
-                _earnedAmt = _earnedAmt.sub(fee);
-            }
+        if (_earnedAmt > 0 && controllerFee > 0) {
+            uint256 fee = _earnedAmt.mul(controllerFee).div(controllerFeeMax);
+            IERC20(earnedAddress).safeTransfer(rewardsAddress, fee);
+            _earnedAmt = _earnedAmt.sub(fee);
         }
 
         return _earnedAmt;
