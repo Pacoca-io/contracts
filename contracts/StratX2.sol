@@ -94,7 +94,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     function deposit(
         address _userAddress,
         uint256 _wantAmt
-    ) public virtual onlyOwner nonReentrant whenNotPaused returns (uint256) {
+    ) external virtual onlyOwner nonReentrant whenNotPaused returns (uint256) {
         IERC20(wantAddress).safeTransferFrom(
             address(msg.sender),
             address(this),
@@ -120,7 +120,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         return sharesAdded;
     }
 
-    function farm() public virtual nonReentrant {
+    function farm() external virtual nonReentrant {
         _farm();
     }
 
@@ -148,7 +148,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     function withdraw(
         address _userAddress,
         uint256 _wantAmt
-    ) public virtual onlyOwner nonReentrant returns (uint256) {
+    ) external virtual onlyOwner nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt <= 0");
 
         uint256 sharesRemoved = _wantAmt.mul(sharesTotal).div(wantLockedTotal);
@@ -187,7 +187,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     // 2. Converts farm tokens into want tokens
     // 3. Deposits want tokens
 
-    function earn() public virtual nonReentrant whenNotPaused {
+    function earn() external virtual nonReentrant whenNotPaused {
         require(isAutoComp, "!isAutoComp");
 
         if (onlyGov) {
@@ -313,7 +313,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         return _earnedAmt;
     }
 
-    function convertDustToEarned() public virtual whenNotPaused {
+    function convertDustToEarned() external virtual whenNotPaused {
         require(isAutoComp, "!isAutoComp");
         require(!isCAKEStaking, "isCAKEStaking");
 
@@ -358,11 +358,11 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function pause() public virtual onlyAllowGov {
+    function pause() external virtual onlyAllowGov {
         _pause();
     }
 
-    function unpause() public virtual onlyAllowGov {
+    function unpause() external virtual onlyAllowGov {
         _unpause();
     }
 
@@ -372,7 +372,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         uint256 _controllerFee,
         uint256 _buyBackRate,
         uint256 _slippageFactor
-    ) public virtual onlyAllowGov {
+    ) external virtual onlyAllowGov {
         require(
             _entranceFeeFactor >= entranceFeeFactorLL,
             "_entranceFeeFactor too low"
@@ -414,33 +414,33 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         );
     }
 
-    function setGov(address _govAddress) public virtual onlyAllowGov {
+    function setGov(address _govAddress) external virtual onlyAllowGov {
         govAddress = _govAddress;
         emit SetGov(_govAddress);
     }
 
-    function setOnlyGov(bool _onlyGov) public virtual onlyAllowGov {
+    function setOnlyGov(bool _onlyGov) external virtual onlyAllowGov {
         onlyGov = _onlyGov;
         emit SetOnlyGov(_onlyGov);
     }
 
     function setUniRouterAddress(
         address _uniRouterAddress
-    ) public virtual onlyAllowGov {
+    ) external virtual onlyAllowGov {
         uniRouterAddress = _uniRouterAddress;
         emit SetUniRouterAddress(_uniRouterAddress);
     }
 
     function setBuyBackAddress(
         address _buyBackAddress
-    ) public virtual onlyAllowGov {
+    ) external virtual onlyAllowGov {
         buyBackAddress = _buyBackAddress;
         emit SetBuyBackAddress(_buyBackAddress);
     }
 
     function setRewardsAddress(
         address _rewardsAddress
-    ) public virtual onlyAllowGov {
+    ) external virtual onlyAllowGov {
         rewardsAddress = _rewardsAddress;
         emit SetRewardsAddress(_rewardsAddress);
     }
@@ -449,7 +449,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         address _token,
         uint256 _amount,
         address _to
-    ) public virtual onlyAllowGov {
+    ) external virtual onlyAllowGov {
         require(_token != earnedAddress, "!safe");
         require(_token != wantAddress, "!safe");
         IERC20(_token).safeTransfer(_to, _amount);
@@ -463,7 +463,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function wrapBNB() public virtual onlyAllowGov {
+    function wrapBNB() external virtual onlyAllowGov {
         _wrapBNB();
     }
 
