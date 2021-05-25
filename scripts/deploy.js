@@ -1,4 +1,5 @@
 const cafeStratSetup = require('./cafeStratSetup')
+const exponent = ethers.BigNumber.from(10).pow(18)
 
 const brewBnbFarm = {
     pid: 14,
@@ -12,6 +13,12 @@ async function main() {
     const Pacoca = await ethers.getContractFactory('Pacoca')
     const pacoca = await Pacoca.deploy()
 
+    const owner = (await ethers.getSigners())[0]
+    await pacoca.mint(
+        owner.address,
+        ethers.BigNumber.from(1000).mul(exponent),
+    )
+
     const PacocaFarm = await ethers.getContractFactory('PacocaFarm')
     const pacocaFarm = await PacocaFarm.deploy(pacoca.address)
 
@@ -24,8 +31,11 @@ async function main() {
         token1Address: brewBnbFarm.token1,
     })
 
+    const StratPacoca = await ethers.getContractFactory('StratPacoca')
+    const stratPacoca = await StratPacoca.deploy(pacoca.address, pacocaFarm.address)
+
     const StratX2_CAFE = await ethers.getContractFactory('StratX2_CAFE')
-    await StratX2_CAFE.deploy(
+    const stratX2_CAFE = await StratX2_CAFE.deploy(
         brewBnbStrat.addresses,
         brewBnbFarm.pid,
         false,
@@ -43,6 +53,25 @@ async function main() {
     )
 
     await pacoca.transferOwnership(pacocaFarm.address)
+    await pacocaFarm.add(
+        1000,
+        brewBnbFarm.lpAddress,
+        false,
+        stratPacoca.address,
+    )
+    await pacocaFarm.add(
+        500,
+        brewBnbFarm.lpAddress,
+        false,
+        stratX2_CAFE.address,
+    )
+
+    console.log({
+        farm: pacocaFarm.address,
+        token: pacoca.address,
+        stratPacoca: stratPacoca.address,
+        stratX2_CAFE: stratX2_CAFE.address,
+    })
 }
 
 main()
