@@ -82,6 +82,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
     uint256 public startBlock = 0; // https://bscscan.com/block/countdown/3888888
 
     PoolInfo[] public poolInfo; // Info of each pool.
+    mapping(IERC20 => bool) public availableAssets; // Info of each pool.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
     uint256 public totalAllocPoint = 0; // Total allocation points. Must be the sum of all allocation points in all pools.
 
@@ -299,6 +300,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         bool _withUpdate,
         address _strat
     ) external onlyOwner {
+        require(!availableAssets[_want], "Can't add another pool of same asset");
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -313,6 +315,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         strat: _strat
         })
         );
+        availableAssets[_want] = true;
     }
 
     // Update the given pool's PACOCA allocation point. Can only be called by the owner.

@@ -3,7 +3,7 @@ const { expect } = require('chai')
 const exponent = ethers.BigNumber.from(10).pow(18)
 const toEther = number => ethers.BigNumber.from(number).mul(exponent)
 
-describe('PacocaStrat Contract', () => {
+describe('PacocaFarm Contract', () => {
     let PacocaFarm, pacocaFarm,
         Pacoca, pacoca,
         Strat, strat,
@@ -45,6 +45,14 @@ describe('PacocaStrat Contract', () => {
             await strat.connect(dev).setSettings(9950, 9950)
             await expect(strat.connect(bob).setSettings(9950, 9950))
                 .to.be.revertedWith('!gov')
+        })
+    })
+
+    describe('Should allow only one pool of each token', () => {
+        it('Only governor can trigger governance functions', async () => {
+            await pacocaFarm.addPool(10, bob.address, false, strat.address)
+            await expect(pacocaFarm.addPool(10, bob.address, false, strat.address))
+                .to.be.revertedWith('Can\'t add another pool of same asset')
         })
     })
 
