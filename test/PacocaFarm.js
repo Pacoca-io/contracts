@@ -40,7 +40,7 @@ describe('PacocaFarm Contract', () => {
         })
     })
 
-    describe('Is governable', () => {
+    describe('Governance', () => {
         it('Only governor can trigger governance functions', async () => {
             await strat.connect(dev).setSettings(9950, 9950)
             await expect(strat.connect(bob).setSettings(9950, 9950))
@@ -48,8 +48,8 @@ describe('PacocaFarm Contract', () => {
         })
     })
 
-    describe('Should allow only one pool of each token', () => {
-        it('Only governor can trigger governance functions', async () => {
+    describe('Add pools', () => {
+        it('Should allow only one pool of each token', async () => {
             await pacocaFarm.addPool(10, bob.address, false, strat.address)
             await expect(pacocaFarm.addPool(10, bob.address, false, strat.address))
                 .to.be.revertedWith('Can\'t add another pool of same asset')
