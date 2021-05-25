@@ -273,7 +273,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     }
 
     function buyBack(uint256 _earnedAmt) internal virtual returns (uint256) {
-        if (buyBackRate = 0) {
+        if (buyBackRate == 0) {
             return _earnedAmt;
         }
 
