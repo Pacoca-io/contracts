@@ -53,13 +53,13 @@ async function main() {
     )
 
     await pacoca.transferOwnership(pacocaFarm.address)
-    await pacocaFarm.add(
+    await pacocaFarm.addPool(
         1000,
-        brewBnbFarm.lpAddress,
+        pacoca.address,
         false,
         stratPacoca.address,
     )
-    await pacocaFarm.add(
+    await pacocaFarm.addPool(
         500,
         brewBnbFarm.lpAddress,
         false,
