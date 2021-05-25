@@ -73,9 +73,9 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
 
     address public PACOCA;
 
-    address public burnAddress = 0x000000000000000000000000000000000000dEaD;
+    address constant public burnAddress = 0x000000000000000000000000000000000000dEaD;
 
-    uint256 public ownerPACOCAReward = 200; // 15% Dev + 5% MKT
+    uint256 constant public ownerPACOCAReward = 200; // 15% Dev + 5% MKT
 
     uint256 public maxSupply = 100000000e18;
     uint256 public PACOCAPerBlock = 2e18; // PACOCA tokens created per block
@@ -180,7 +180,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
     }
 
     // Want tokens moved from user -> PACOCAFarm (PACOCA allocation) -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) public nonReentrant {
+    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrant {
         updatePool(_pid);
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -253,12 +253,12 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
 
-    function withdrawAll(uint256 _pid) public nonReentrant {
+    function withdrawAll(uint256 _pid) external nonReentrant {
         withdraw(_pid, uint256(-1));
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw(uint256 _pid) public nonReentrant {
+    function emergencyWithdraw(uint256 _pid) external nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
@@ -293,12 +293,12 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
 
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do. (Only if want tokens are stored here.)
-    function add(
+    function addPool(
         uint256 _allocPoint,
         IERC20 _want,
         bool _withUpdate,
         address _strat
-    ) public onlyOwner {
+    ) external onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -320,7 +320,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         uint256 _pid,
         uint256 _allocPoint,
         bool _withUpdate
-    ) public onlyOwner {
+    ) external onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -338,7 +338,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         PACOCAPerBlock = _PACOCAPerBlock;
     }
 
-    function inCaseTokensGetStuck(address _token, uint256 _amount) public onlyOwner {
+    function inCaseTokensGetStuck(address _token, uint256 _amount) external onlyOwner {
         require(_token != PACOCA, "!safe");
         IERC20(_token).safeTransfer(msg.sender, _amount);
     }

@@ -26,7 +26,7 @@ describe('PacocaStrat Contract', () => {
 
         await pacoca.mint(bob.address, toEther(10))
         await pacoca.mint(alice.address, toEther(10))
-        await pacocaFarm.add(10, pacoca.address, false, strat.address)
+        await pacocaFarm.addPool(10, pacoca.address, false, strat.address)
         await pacoca.transferOwnership(pacocaFarm.address)
         await strat.transferOwnership(pacocaFarm.address)
     })
