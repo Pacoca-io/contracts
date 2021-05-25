@@ -345,9 +345,4 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         require(_token != PACOCA, "!safe");
         IERC20(_token).safeTransfer(msg.sender, _amount);
     }
-
-    // Mint function is here to send tokens for farming at partner projects
-    function mint(address _to, uint256 _amount) public onlyOwner {
-        PACOCAToken(PACOCA).mint(_to, _amount);
-    }
 }
