@@ -27,7 +27,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
     uint256 public constant entranceFeeFactorMax = 10000;
     uint256 public constant entranceFeeFactorLL = 9950; // 0.5% is the max entrance fee settable. LL = lowerlimit
 
-    uint256 public withdrawFeeFactor = 10000; // 0.1% withdraw fee - goes to pool
+    uint256 public withdrawFeeFactor = 10000; // No withdraw fees
     uint256 public constant withdrawFeeFactorMax = 10000;
     uint256 public constant withdrawFeeFactorLL = 9950; // 0.5% is the max entrance fee settable. LL = lowerlimit
 
@@ -39,7 +39,8 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
         govAddress = msg.sender;
     }
 
-    // Main want token compounding function
+    // This contract doesn't auto-compound
+    // earn() function is here to follow the Strategy interface
     function earn() external {}
 
     // Transfer want tokens pacocaFarm -> strategy
