@@ -37,6 +37,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
         wantAddress = _pacoca;
         pacocaFarmAddress = _pacocaFarmAddress;
         govAddress = msg.sender;
+        transferOwnership(_pacocaFarmAddress);
     }
 
     // This contract doesn't auto-compound
