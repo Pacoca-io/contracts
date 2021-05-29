@@ -6,6 +6,7 @@ require('dotenv').config()
 
 require('@nomiclabs/hardhat-waffle')
 require('hardhat-abi-exporter')
+require('hardhat-gas-reporter')
 
 module.exports = {
     solidity: {
@@ -27,5 +28,9 @@ module.exports = {
         clear: true,
         only: ['Pacoca', 'StratX2'],
         spacing: 4,
+    },
+    gasReporter: {
+        currency: 'USD',
+        gasPrice: 5,
     },
 }
