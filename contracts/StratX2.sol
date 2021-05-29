@@ -38,7 +38,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     address public autoFarmAddress;
     address public AUTOAddress;
     address public govAddress; // timelock contract
-    bool public onlyGov = true;
+    bool public onlyGov = false;
 
     uint256 public lastEarnBlock = 0;
     uint256 public wantLockedTotal = 0;
