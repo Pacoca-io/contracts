@@ -1,4 +1,6 @@
 const cafeStratSetup = require('./cafeStratSetup')
+
+const numberFormatter = new Intl.NumberFormat('en-US')
 const exponent = ethers.BigNumber.from(10).pow(18)
 
 const brewBnbFarm = {
@@ -8,20 +10,62 @@ const brewBnbFarm = {
     token1: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
 }
 
+const mintAllocatedTokens = async ({ pacocaTokenContract }) => {
+    const owner = (await ethers.getSigners())[0]
+    const oneMillionTokens = ethers.BigNumber.from(10).pow(6).mul(exponent)
+
+    const allocations = [
+        {
+            name: 'Partner Farming',
+            address: owner.address, // TODO get address
+            amount: ethers.BigNumber.from(10).mul(oneMillionTokens), // 10M tokens
+        },
+        {
+            name: 'ICO',
+            address: owner.address, // TODO get address
+            amount: ethers.BigNumber.from(10).mul(oneMillionTokens), // 10M tokens
+        },
+        {
+            name: 'Airdrops',
+            address: owner.address, // TODO get address
+            amount: ethers.BigNumber.from(8).mul(oneMillionTokens), // 8M tokens
+        },
+        {
+            name: 'Initial Liquidity',
+            address: owner.address, // TODO get address
+            amount: ethers.BigNumber.from(2).mul(oneMillionTokens), // 2M tokens
+        },
+    ]
+
+    for (const allocation of allocations) {
+        await pacocaTokenContract.mint(allocation.address, allocation.amount)
+
+        const parsedAmount = numberFormatter
+            .format(allocation.amount.div(exponent).toNumber())
+
+        console.log(`Minted ${ allocation.name } tokens`)
+        console.log(`${ parsedAmount } to ${ allocation.address }`)
+        console.log(`---------------------------------------------------------`)
+    }
+}
+
 async function main() {
-    // We get the contract to deploy
+    // Deploy pacoca token
     const Pacoca = await ethers.getContractFactory('Pacoca')
     const pacoca = await Pacoca.deploy()
 
-    const owner = (await ethers.getSigners())[0]
-    await pacoca.mint(
-        owner.address,
-        ethers.BigNumber.from(1000).mul(exponent),
-    )
+    // Mint allocated tokens
+    await mintAllocatedTokens({ pacocaTokenContract: pacoca })
 
+    // Deploy Pacoca Farm
     const PacocaFarm = await ethers.getContractFactory('PacocaFarm')
-    const pacocaFarm = await PacocaFarm.deploy(pacoca.address)
+    const pacocaFarm = await PacocaFarm.deploy(pacoca.address, 7862758)
 
+    // Deploy Pacoca Strategy
+    const StratPacoca = await ethers.getContractFactory('StratPacoca')
+    const stratPacoca = await StratPacoca.deploy(pacoca.address, pacocaFarm.address)
+
+    // Deploy CafeLP Strategy
     const brewBnbStrat = cafeStratSetup({
         owner: (await ethers.getSigners())[0].address,
         pacocaFarm: pacocaFarm.address,
@@ -30,10 +74,6 @@ async function main() {
         token0Address: brewBnbFarm.token0,
         token1Address: brewBnbFarm.token1,
     })
-
-    const StratPacoca = await ethers.getContractFactory('StratPacoca')
-    const stratPacoca = await StratPacoca.deploy(pacoca.address, pacocaFarm.address)
-
     const StratX2_CAFE = await ethers.getContractFactory('StratX2_CAFE')
     const stratX2_CAFE = await StratX2_CAFE.deploy(
         brewBnbStrat.addresses,
@@ -53,6 +93,7 @@ async function main() {
     )
 
     await pacoca.transferOwnership(pacocaFarm.address)
+
     await pacocaFarm.addPool(
         1000,
         pacoca.address,
