@@ -5,6 +5,7 @@ require('dotenv').config()
  */
 
 require('@nomiclabs/hardhat-waffle')
+require('hardhat-abi-exporter')
 
 module.exports = {
     solidity: {
@@ -21,5 +22,10 @@ module.exports = {
             url: 'https://bsc-dataseed.binance.org',
             accounts: [process.env.BSC_PRIVATE_KEY],
         },
+    },
+    abiExporter: {
+        clear: true,
+        only: ['Pacoca', 'StratX2'],
+        spacing: 4,
     },
 }
