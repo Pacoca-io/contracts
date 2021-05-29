@@ -16,14 +16,14 @@ const getTokenToEarnedPath = token => token === brew
         ? [wbnb, brew]
         : [token, wbnb, brew]
 
-module.exports = ({ owner, pacocaFarm, pacoca, wantAddress, token0Address, token1Address }) => {
+module.exports = ({ pacocaFarm, pacoca, wantAddress, token0Address, token1Address }) => {
     token0Address = token0Address.toLowerCase()
     token1Address = token1Address.toLowerCase()
 
     return {
         addresses: [
             wbnb,
-            owner,
+            process.env.BSC_CONTROLLER_ADDRESS,
             pacocaFarm,
             pacoca,
 
@@ -34,7 +34,7 @@ module.exports = ({ owner, pacocaFarm, pacoca, wantAddress, token0Address, token
 
             cafeChef,
             router,
-            owner,
+            process.env.BSC_REWARDS_ADDRESS,
             burn,
         ],
 

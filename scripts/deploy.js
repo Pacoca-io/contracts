@@ -1,7 +1,8 @@
-const cafeStratSetup = require('./cafeStratSetup')
+const cafeStratSetup = require('./helpers/cafe-strat-setup')
+const breakLine = require('./helpers/break-line')
+const exponent = require('./helpers/exponent')
 
 const numberFormatter = new Intl.NumberFormat('en-US')
-const exponent = ethers.BigNumber.from(10).pow(18)
 
 const brewBnbFarm = {
     pid: 14,
@@ -10,14 +11,19 @@ const brewBnbFarm = {
     token1: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
 }
 
-const mintAllocatedTokens = async ({ pacocaTokenContract }) => {
+const deployToken = async () => {
+    const Pacoca = await ethers.getContractFactory('Pacoca')
+    return await Pacoca.deploy()
+}
+
+const mintAllocatedTokens = async ({ pacoca }) => {
     const owner = (await ethers.getSigners())[0]
     const oneMillionTokens = ethers.BigNumber.from(10).pow(6).mul(exponent)
 
     const allocations = [
         {
             name: 'Partner Farming',
-            address: owner.address, // TODO get address
+            address: process.env.BSC_PARTNER_FARMING_ADDRESS,
             amount: ethers.BigNumber.from(10).mul(oneMillionTokens), // 10M tokens
         },
         {
@@ -27,47 +33,61 @@ const mintAllocatedTokens = async ({ pacocaTokenContract }) => {
         },
         {
             name: 'Airdrops',
-            address: owner.address, // TODO get address
+            address: process.env.BSC_AIRDROP_ADDRESS,
             amount: ethers.BigNumber.from(8).mul(oneMillionTokens), // 8M tokens
         },
         {
             name: 'Initial Liquidity',
-            address: owner.address, // TODO get address
+            address: process.env.BSC_LIQUIDITY_ADDRESS,
             amount: ethers.BigNumber.from(2).mul(oneMillionTokens), // 2M tokens
         },
     ]
 
+    console.log('Allocated tokens:')
+    console.log()
+
     for (const allocation of allocations) {
-        await pacocaTokenContract.mint(allocation.address, allocation.amount)
+        await pacoca.mint(allocation.address, allocation.amount)
 
         const parsedAmount = numberFormatter
             .format(allocation.amount.div(exponent).toNumber())
 
         console.log(`Minted ${ allocation.name } tokens`)
         console.log(`${ parsedAmount } to ${ allocation.address }`)
-        console.log(`---------------------------------------------------------`)
+        breakLine()
     }
 }
 
-async function main() {
-    // Deploy pacoca token
-    const Pacoca = await ethers.getContractFactory('Pacoca')
-    const pacoca = await Pacoca.deploy()
-
-    // Mint allocated tokens
-    await mintAllocatedTokens({ pacocaTokenContract: pacoca })
-
-    // Deploy Pacoca Farm
+const deployFarm = async ({ pacoca }) => {
     const PacocaFarm = await ethers.getContractFactory('PacocaFarm')
     const pacocaFarm = await PacocaFarm.deploy(pacoca.address, 7862758)
 
-    // Deploy Pacoca Strategy
-    const StratPacoca = await ethers.getContractFactory('StratPacoca')
-    const stratPacoca = await StratPacoca.deploy(pacoca.address, pacocaFarm.address)
+    await pacoca.transferOwnership(pacocaFarm.address)
+    await pacocaFarm.setPacocaPerBlock(ethers.BigNumber.from(10).mul(exponent))
 
-    // Deploy CafeLP Strategy
+    return pacocaFarm
+}
+
+const deployPacocaStrat = async ({ pacoca, pacocaFarm }) => {
+    const StratPacoca = await ethers.getContractFactory('StratPacoca')
+    const stratPacoca = await StratPacoca.deploy(
+        pacoca.address,
+        pacocaFarm.address,
+        process.env.BSC_CONTROLLER_ADDRESS,
+    )
+
+    await pacocaFarm.addPool(
+        1000,
+        pacoca.address,
+        false,
+        stratPacoca.address,
+    )
+
+    return stratPacoca
+}
+
+const deployCafeStrat = async ({ pacoca, pacocaFarm }) => {
     const brewBnbStrat = cafeStratSetup({
-        owner: (await ethers.getSigners())[0].address,
         pacocaFarm: pacocaFarm.address,
         pacoca: pacoca.address,
         wantAddress: brewBnbFarm.lpAddress,
@@ -92,14 +112,6 @@ async function main() {
         10000,
     )
 
-    await pacoca.transferOwnership(pacocaFarm.address)
-
-    await pacocaFarm.addPool(
-        1000,
-        pacoca.address,
-        false,
-        stratPacoca.address,
-    )
     await pacocaFarm.addPool(
         500,
         brewBnbFarm.lpAddress,
@@ -107,12 +119,51 @@ async function main() {
         stratX2_CAFE.address,
     )
 
-    console.log({
-        farm: pacocaFarm.address,
-        token: pacoca.address,
-        stratPacoca: stratPacoca.address,
-        stratX2_CAFE: stratX2_CAFE.address,
-    })
+    return stratX2_CAFE
+}
+
+async function main() {
+    // Deploy pacoca token
+    const pacoca = await deployToken()
+
+    // Mint allocated tokens
+    await mintAllocatedTokens({ pacoca })
+
+    // Deploy Pacoca Farm
+    const pacocaFarm = await deployFarm({ pacoca })
+
+    // Deploy Pacoca Strategy
+    const pacocaStrat = await deployPacocaStrat({ pacoca, pacocaFarm })
+
+    // Deploy CafeLP Strategy
+    const brewBnbStrat = await deployCafeStrat({ pacoca, pacocaFarm })
+
+    await pacocaFarm.transferOwnership(process.env.BSC_CONTROLLER_ADDRESS)
+
+    console.log()
+    console.log('Contract Addresses:')
+    console.log()
+
+    console.log(`Pacoca Token`)
+    console.log(`address: ${ pacoca.address }`)
+    console.log(`owner: ${ await pacoca.owner() }`)
+    breakLine()
+    console.log(`Pacoca Farm`)
+    console.log(`address: ${ pacocaFarm.address }`)
+    console.log(`owner: ${ await pacocaFarm.owner() }`)
+    console.log(`pacoca/block: ${ await pacocaFarm.PACOCAPerBlock() }`)
+    breakLine()
+    console.log(`PACOCA Strat`)
+    console.log(`address: ${ pacocaStrat.address }`)
+    console.log(`owner: ${ await pacocaStrat.owner() }`)
+    console.log(`gov: ${ await pacocaStrat.govAddress() }`)
+    breakLine()
+    console.log(`BREW-BNB Strat`)
+    console.log(`address: ${ brewBnbStrat.address }`)
+    console.log(`owner: ${ await brewBnbStrat.owner() }`)
+    console.log(`gov: ${ await brewBnbStrat.govAddress() }`)
+    console.log(`rewards: ${ await brewBnbStrat.rewardsAddress() }`)
+    breakLine()
 }
 
 main()
