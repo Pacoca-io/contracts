@@ -22,7 +22,7 @@ describe('PacocaFarm Contract', () => {
         pacocaFarm = await PacocaFarm.deploy(pacoca.address, 0)
 
         Strat = await ethers.getContractFactory('StratPacoca')
-        strat = await Strat.deploy(pacoca.address, pacocaFarm.address)
+        strat = await Strat.deploy(pacoca.address, pacocaFarm.address, dev.address)
 
         await pacoca.mint(bob.address, toEther(10))
         await pacoca.mint(alice.address, toEther(10))

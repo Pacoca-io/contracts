@@ -33,10 +33,11 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
 
     event SetSettings(uint256 _entranceFeeFactor, uint256 _withdrawFeeFactor);
 
-    constructor (address _pacoca, address _pacocaFarmAddress) public {
+    constructor (address _pacoca, address _pacocaFarmAddress, address _govAddress) public {
         wantAddress = _pacoca;
         pacocaFarmAddress = _pacocaFarmAddress;
-        govAddress = msg.sender;
+        govAddress = _govAddress;
+
         transferOwnership(_pacocaFarmAddress);
     }
 
