@@ -79,7 +79,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
 
     uint256 public maxSupply = 100000000e18;
     uint256 public PACOCAPerBlock = 2e18; // PACOCA tokens created per block
-    uint256 public startBlock = 0; // https://bscscan.com/block/countdown/3888888
+    uint256 public startBlock = 0; // https://bscscan.com/block/countdown/7862758
 
     PoolInfo[] public poolInfo; // Info of each pool.
     mapping(IERC20 => bool) public availableAssets; // Info of each pool.
@@ -94,8 +94,9 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         uint256 amount
     );
 
-    constructor(address _pacoca) public {
+    constructor(address _pacoca, uint256 _startBlock) public {
         PACOCA = _pacoca;
+        startBlock = _startBlock;
     }
 
     function poolLength() external view returns (uint256) {

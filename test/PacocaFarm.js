@@ -19,7 +19,7 @@ describe('PacocaFarm Contract', () => {
         bob = wallets[2]
 
         PacocaFarm = await ethers.getContractFactory('PacocaFarm')
-        pacocaFarm = await PacocaFarm.deploy(pacoca.address)
+        pacocaFarm = await PacocaFarm.deploy(pacoca.address, 0)
 
         Strat = await ethers.getContractFactory('StratPacoca')
         strat = await Strat.deploy(pacoca.address, pacocaFarm.address)
