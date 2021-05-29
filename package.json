@@ -4,8 +4,8 @@
         "test": "npx hardhat test",
         "build": "npx hardhat compile",
         "node": "npx hardhat node",
-        "deploy:local": "npx hardhat run --network localhost scripts/deploy.js",
-        "deploy:bsc": "npx hardhat run --network bsc scripts/deploy.js"
+        "deploy:local": "npx hardhat run --network localhost scripts/deploy.js > deploy-logs.local.txt",
+        "deploy:bsc": "npx hardhat run --network bsc scripts/deploy.js > deploy-logs.txt"
     },
     "devDependencies": {
         "@nomiclabs/hardhat-ethers": "^2.0.2",
