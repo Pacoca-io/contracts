@@ -5,6 +5,7 @@
         "build": "npx hardhat compile",
         "node": "npx hardhat node",
         "deploy:local": "npx hardhat run --network localhost scripts/deploy.js > deploy-logs.local.txt",
+        "deploy:bsc:test": "npx hardhat run --network bscTest scripts/deploy.js > deploy-logs.txt",
         "deploy:bsc": "npx hardhat run --network bsc scripts/deploy.js > deploy-logs.txt"
     },
     "devDependencies": {

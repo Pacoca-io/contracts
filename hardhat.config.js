@@ -19,6 +19,10 @@ module.exports = {
         },
     },
     networks: {
+        bscTest: {
+            url: 'https://bsc-dataseed.binance.org',
+            accounts: [process.env.BSC_TEST_PRIVATE_KEY],
+        },
         bsc: {
             url: 'https://bsc-dataseed.binance.org',
             accounts: [process.env.BSC_PRIVATE_KEY],
