@@ -1,49 +1,67 @@
-const wbnb = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'.toLowerCase()
-const brew = '0x790be81c3ca0e53974be2688cdb954732c9862e1'.toLowerCase()
-const cafeChef = '0xc772955c33088a97D56d0BBf473d05267bC4feBB'
-const router = '0x933DAea3a5995Fb94b14A7696a5F3ffD7B1E385A'
-const burn = '0x000000000000000000000000000000000000dead'
+const CONSTANTS = require('./constants')
+const tokenRouter = require('./token-router')
 
-const getEarnedToTokenPath = token => token === brew
-    ? []
-    : token === wbnb
-        ? [brew, wbnb]
-        : [brew, wbnb, token]
-
-const getTokenToEarnedPath = token => token === brew
-    ? []
-    : token === wbnb
-        ? [wbnb, brew]
-        : [token, wbnb, brew]
-
-module.exports = ({ pacocaFarm, pacoca, wantAddress, token0Address, token1Address }) => {
+module.exports = ({ pacocaFarm, pacoca, wantAddress, token0Address, token1Address, isCAKEStaking, platform }) => {
     token0Address = token0Address.toLowerCase()
     token1Address = token1Address.toLowerCase()
 
-    return {
-        addresses: [
-            wbnb,
-            process.env.BSC_CONTROLLER_ADDRESS,
-            pacocaFarm,
-            pacoca,
+    let masterchef
+    let router
+    let earnedToken
 
-            wantAddress,
-            token0Address,
-            token1Address,
-            brew,
-
-            cafeChef,
-            router,
-            process.env.BSC_REWARDS_ADDRESS,
-            burn,
-        ],
-
-        earnedToAUTOPath: [brew, wbnb, pacoca],
-
-        earnedToToken0Path: getEarnedToTokenPath(token0Address),
-        earnedToToken1Path: getEarnedToTokenPath(token1Address),
-
-        token0ToEarnedPath: getTokenToEarnedPath(token0Address),
-        token1ToEarnedPath: getTokenToEarnedPath(token1Address),
+    switch (platform) {
+        case CONSTANTS.CAFE_SWAP:
+            masterchef = CONSTANTS.CAFE_MASTERCHEF
+            router = CONSTANTS.CAFE_ROUTER
+            earnedToken = CONSTANTS.BREW
+            break
+        case CONSTANTS.PANCAKE_SWAP:
+            masterchef = CONSTANTS.PANCAKE_MASTERCHEF
+            router = CONSTANTS.PANCAKE_ROUTER
+            earnedToken = CONSTANTS.CAKE
+            break
+        default:
+            throw new Error('Platform must be specified')
     }
+
+    const addresses = [
+        CONSTANTS.WBNB,
+        process.env.BSC_CONTROLLER_ADDRESS,
+        pacocaFarm,
+        pacoca,
+
+        wantAddress,
+        token0Address,
+        token1Address,
+        earnedToken,
+
+        masterchef,
+        router,
+        process.env.BSC_REWARDS_ADDRESS,
+        CONSTANTS.BURN,
+    ]
+
+    const earnedToAUTOPath = [earnedToken, CONSTANTS.WBNB, pacoca]
+
+    return isCAKEStaking
+        ? {
+            addresses,
+            earnedToAUTOPath,
+
+            earnedToToken0Path: [],
+            earnedToToken1Path: [],
+
+            token0ToEarnedPath: [],
+            token1ToEarnedPath: [],
+        }
+        : {
+            addresses,
+            earnedToAUTOPath,
+
+            earnedToToken0Path: tokenRouter({ fromToken: earnedToken, toToken: token0Address }),
+            earnedToToken1Path: tokenRouter({ fromToken: earnedToken, toToken: token1Address }),
+
+            token0ToEarnedPath: tokenRouter({ fromToken: token0Address, toToken: earnedToken }),
+            token1ToEarnedPath: tokenRouter({ fromToken: token1Address, toToken: earnedToken }),
+        }
 }

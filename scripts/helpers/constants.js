@@ -15,11 +15,17 @@ const addresses = {
 
     // PancakeSwap
     CAKE: '0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82',
-    CAFE_MASTERCHEF: '0x73feaa1eE314F8c655E354234017bE2193C9E24E',
-    CAFE_ROUTER: '0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F',
+    PANCAKE_MASTERCHEF: '0x73feaa1ee314f8c655e354234017be2193c9e24e',
+    PANCAKE_ROUTER: '0x10ED43C718714eb63d5aA57B78B54704E256024E',
 }
 
-const constants = addresses
+const constants = {
+    ...addresses,
+
+    // Platforms
+    CAFE_SWAP: 'CAFE_SWAP',
+    PANCAKE_SWAP: 'PANCAKE_SWAP',
+}
 
 for (const name in addresses) {
     constants[name] = addresses[name].toLowerCase()

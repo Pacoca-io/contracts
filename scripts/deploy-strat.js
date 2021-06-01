@@ -1,19 +1,23 @@
 const hre = require('hardhat')
 const cafeStratSetup = require('./helpers/cafe-strat-setup')
+const CONSTANTS = require('./helpers/constants')
 
 const deployCafeStrat = async ({ farmInfo, pacoca, pacocaFarm }) => {
     const stratData = cafeStratSetup({
         pacocaFarm: pacocaFarm,
         pacoca: pacoca,
-        wantAddress: farmInfo.lpAddress,
+        wantAddress: farmInfo.wantAddress,
         token0Address: farmInfo.token0,
         token1Address: farmInfo.token1,
+        isCAKEStaking: farmInfo.isCAKEStaking,
+        platform: farmInfo.platform,
     })
     const StratX2_CAFE = await hre.ethers.getContractFactory('StratX2_CAFE')
-    return await StratX2_CAFE.deploy(
+
+    const strat = await StratX2_CAFE.deploy(
         stratData.addresses,
         farmInfo.pid,
-        false,
+        farmInfo.isCAKEStaking || false, // Is cake staking
         false,
         true,
         stratData.earnedToAUTOPath,
@@ -26,23 +30,27 @@ const deployCafeStrat = async ({ farmInfo, pacoca, pacocaFarm }) => {
         9990,
         10000,
     )
+
+    console.log('strat address: ', strat.address)
+
+    return strat
 }
 
 const run = async () => {
     const farmInfo = {
-        pid: 38,
-        lpAddress: '0xb9c7049cb298035640e7b6db219e68c348b976b7',
-        token0: '0x55671114d774ee99d653d6c12460c780a67f1d18',
-        token1: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c',
+        pid: 0,
+        wantAddress: CONSTANTS.CAKE,
+        token0: '0x0000000000000000000000000000000000000000',
+        token1: '0x0000000000000000000000000000000000000000',
+        isCAKEStaking: true,
+        platform: CONSTANTS.PANCAKE_SWAP,
     }
 
-    console.log(
-        await deployCafeStrat({
-            farmInfo,
-            pacocaFarm: '0x55410d946dfab292196462ca9be9f3e4e4f337dd',
-            pacoca: '0x55671114d774ee99d653d6c12460c780a67f1d18',
-        }),
-    )
+    await deployCafeStrat({
+        farmInfo,
+        pacocaFarm: CONSTANTS.PACOCA_FARM,
+        pacoca: CONSTANTS.PACOCA_TOKEN,
+    })
 }
 
 run()
