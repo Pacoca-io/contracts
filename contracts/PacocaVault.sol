@@ -1,20 +1,25 @@
 pragma solidity 0.6.12;
 
-contract CakeVault is Ownable, Pausable {
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+
+import "./PacocaFarm.sol";
+
+contract PacocaVault is Ownable, Pausable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
     struct UserInfo {
         uint256 shares; // number of shares for a user
         uint256 lastDepositedTime; // keeps track of deposited time for potential penalty
-        uint256 cakeAtLastUserAction; // keeps track of cake deposited at the last user action
+        uint256 pacocaAtLastUserAction; // keeps track of pacoca deposited at the last user action
         uint256 lastUserActionTime; // keeps track of the last user action time
     }
 
-    IERC20 public immutable token; // Cake token
-    IERC20 public immutable receiptToken; // Syrup token
+    IERC20 public immutable token; // Pacoca token
 
-    IMasterChef public immutable masterchef;
+    PacocaFarm public immutable masterchef;
 
     mapping(address => UserInfo) public userInfo;
 
@@ -41,21 +46,18 @@ contract CakeVault is Ownable, Pausable {
 
     /**
      * @notice Constructor
-     * @param _token: Cake token contract
-     * @param _receiptToken: Syrup token contract
+     * @param _token: Pacoca token contract
      * @param _masterchef: MasterChef contract
      * @param _admin: address of the admin
      * @param _treasury: address of the treasury (collects fees)
      */
     constructor(
         IERC20 _token,
-        IERC20 _receiptToken,
-        IMasterChef _masterchef,
+        PacocaFarm _masterchef,
         address _admin,
         address _treasury
     ) public {
         token = _token;
-        receiptToken = _receiptToken;
         masterchef = _masterchef;
         admin = _admin;
         treasury = _treasury;
@@ -82,9 +84,9 @@ contract CakeVault is Ownable, Pausable {
     }
 
     /**
-     * @notice Deposits funds into the Cake Vault
+     * @notice Deposits funds into the Pacoca Vault
      * @dev Only possible when contract not paused.
-     * @param _amount: number of tokens to deposit (in CAKE)
+     * @param _amount: number of tokens to deposit (in PACOCA)
      */
     function deposit(uint256 _amount) external whenNotPaused notContract {
         require(_amount > 0, "Nothing to deposit");
@@ -104,7 +106,7 @@ contract CakeVault is Ownable, Pausable {
 
         totalShares = totalShares.add(currentShares);
 
-        user.cakeAtLastUserAction = user.shares.mul(balanceOf()).div(totalShares);
+        user.pacocaAtLastUserAction = user.shares.mul(balanceOf()).div(totalShares);
         user.lastUserActionTime = block.timestamp;
 
         _earn();
@@ -120,11 +122,11 @@ contract CakeVault is Ownable, Pausable {
     }
 
     /**
-     * @notice Reinvests CAKE tokens into MasterChef
+     * @notice Reinvests PACOCA tokens into MasterChef
      * @dev Only possible when contract not paused.
      */
     function harvest() external notContract whenNotPaused {
-        IMasterChef(masterchef).leaveStaking(0);
+        PacocaFarm(masterchef).withdraw(0, 0);
 
         uint256 bal = available();
         uint256 currentPerformanceFee = bal.mul(performanceFee).div(10000);
@@ -202,15 +204,14 @@ contract CakeVault is Ownable, Pausable {
      * @dev EMERGENCY ONLY. Only callable by the contract admin.
      */
     function emergencyWithdraw() external onlyAdmin {
-        IMasterChef(masterchef).emergencyWithdraw(0);
+        PacocaFarm(masterchef).emergencyWithdraw(0);
     }
 
     /**
-     * @notice Withdraw unexpected tokens sent to the Cake Vault
+     * @notice Withdraw unexpected tokens sent to the Pacoca Vault
      */
     function inCaseTokensGetStuck(address _token) external onlyAdmin {
         require(_token != address(token), "Token cannot be same as deposit token");
-        require(_token != address(receiptToken), "Token cannot be same as receipt token");
 
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(msg.sender, amount);
@@ -236,10 +237,10 @@ contract CakeVault is Ownable, Pausable {
 
     /**
      * @notice Calculates the expected harvest reward from third party
-     * @return Expected reward to collect in CAKE
+     * @return Expected reward to collect in PACOCA
      */
-    function calculateHarvestCakeRewards() external view returns (uint256) {
-        uint256 amount = IMasterChef(masterchef).pendingCake(0, address(this));
+    function calculateHarvestPacocaRewards() external view returns (uint256) {
+        uint256 amount = PacocaFarm(masterchef).pendingPACOCA(0, address(this));
         amount = amount.add(available());
         uint256 currentCallFee = amount.mul(callFee).div(10000);
 
@@ -248,10 +249,10 @@ contract CakeVault is Ownable, Pausable {
 
     /**
      * @notice Calculates the total pending rewards that can be restaked
-     * @return Returns total pending cake rewards
+     * @return Returns total pending Pacoca rewards
      */
-    function calculateTotalPendingCakeRewards() external view returns (uint256) {
-        uint256 amount = IMasterChef(masterchef).pendingCake(0, address(this));
+    function calculateTotalPendingPacocaRewards() external view returns (uint256) {
+        uint256 amount = PacocaFarm(masterchef).pendingPACOCA(0, address(this));
         amount = amount.add(available());
 
         return amount;
@@ -265,7 +266,7 @@ contract CakeVault is Ownable, Pausable {
     }
 
     /**
-     * @notice Withdraws from funds from the Cake Vault
+     * @notice Withdraws from funds from the Pacoca Vault
      * @param _shares: Number of shares to withdraw
      */
     function withdraw(uint256 _shares) public notContract {
@@ -280,7 +281,7 @@ contract CakeVault is Ownable, Pausable {
         uint256 bal = available();
         if (bal < currentAmount) {
             uint256 balWithdraw = currentAmount.sub(bal);
-            IMasterChef(masterchef).leaveStaking(balWithdraw);
+            PacocaFarm(masterchef).withdraw(0, balWithdraw);
             uint256 balAfter = available();
             uint256 diff = balAfter.sub(bal);
             if (diff < balWithdraw) {
@@ -295,9 +296,9 @@ contract CakeVault is Ownable, Pausable {
         }
 
         if (user.shares > 0) {
-            user.cakeAtLastUserAction = user.shares.mul(balanceOf()).div(totalShares);
+            user.pacocaAtLastUserAction = user.shares.mul(balanceOf()).div(totalShares);
         } else {
-            user.cakeAtLastUserAction = 0;
+            user.pacocaAtLastUserAction = 0;
         }
 
         user.lastUserActionTime = block.timestamp;
@@ -320,7 +321,7 @@ contract CakeVault is Ownable, Pausable {
      * @dev It includes tokens held by the contract and held in MasterChef
      */
     function balanceOf() public view returns (uint256) {
-        (uint256 amount, ) = IMasterChef(masterchef).userInfo(0, address(this));
+        (uint256 amount, ) = PacocaFarm(masterchef).userInfo(0, address(this));
         return token.balanceOf(address(this)).add(amount);
     }
 
@@ -330,7 +331,7 @@ contract CakeVault is Ownable, Pausable {
     function _earn() internal {
         uint256 bal = available();
         if (bal > 0) {
-            IMasterChef(masterchef).enterStaking(bal);
+            PacocaFarm(masterchef).deposit(0, bal);
         }
     }
 
