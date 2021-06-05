@@ -2,6 +2,20 @@ const hre = require('hardhat')
 const cafeStratSetup = require('./helpers/cafe-strat-setup')
 const CONSTANTS = require('./helpers/constants')
 
+const getTokensInLP = async ({ lp }) => {
+    const abi = [
+        'function token0() external view returns (address)',
+        'function token1() external view returns (address)',
+    ]
+
+    const contract = new hre.ethers.Contract(lp, abi, hre.ethers.provider)
+
+    return {
+        token0: await contract.token0(),
+        token1: await contract.token1(),
+    }
+}
+
 const deployCafeStrat = async ({ farmInfo, pacoca, pacocaFarm }) => {
     const stratData = cafeStratSetup({
         pacocaFarm: pacocaFarm,
@@ -26,8 +40,8 @@ const deployCafeStrat = async ({ farmInfo, pacoca, pacocaFarm }) => {
         stratData.token0ToEarnedPath,
         stratData.token1ToEarnedPath,
         150,
-        150,
-        9990,
+        200,
+        9995,
         10000,
     )
 
@@ -38,16 +52,17 @@ const deployCafeStrat = async ({ farmInfo, pacoca, pacocaFarm }) => {
 
 const run = async () => {
     const farmInfo = {
-        pid: 0,
-        wantAddress: CONSTANTS.CAKE,
-        token0: '0x0000000000000000000000000000000000000000',
-        token1: '0x0000000000000000000000000000000000000000',
-        isCAKEStaking: true,
+        pid: 252,
+        wantAddress: '0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16',
+        isCAKEStaking: false,
         platform: CONSTANTS.PANCAKE_SWAP,
     }
 
     await deployCafeStrat({
-        farmInfo,
+        farmInfo: {
+            ...farmInfo,
+            ...await getTokensInLP({ lp: farmInfo.wantAddress })
+        },
         pacocaFarm: CONSTANTS.PACOCA_FARM,
         pacoca: CONSTANTS.PACOCA_TOKEN,
     })
