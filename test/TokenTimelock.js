@@ -1,6 +1,6 @@
 const { expect } = require('chai')
 
-describe('Pacoca Token Contract', () => {
+describe('Token Timelock Contract', () => {
     let Pacoca, pacoca,
         TokenTimelock, tokenTimelock,
         dev, bob
