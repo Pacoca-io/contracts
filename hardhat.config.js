@@ -21,11 +21,15 @@ module.exports = {
     networks: {
         bscTest: {
             url: 'https://bsc-dataseed.binance.org',
-            accounts: [process.env.BSC_TEST_PRIVATE_KEY],
+            accounts: process.env.BSC_TEST_PRIVATE_KEY
+                ? [process.env.BSC_TEST_PRIVATE_KEY]
+                : [],
         },
         bsc: {
             url: 'https://bsc-dataseed.binance.org',
-            accounts: [process.env.BSC_PRIVATE_KEY],
+            accounts: process.env.BSC_PRIVATE_KEY
+                ? [process.env.BSC_PRIVATE_KEY]
+                : [],
         },
     },
     abiExporter: {
