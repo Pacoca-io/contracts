@@ -6,16 +6,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Burnable.sol";
 
 contract PacocaCollectibles is ERC1155("https://api.pacoca.io/nfts/"), ERC1155Burnable, Ownable {
-    uint256 public count;
-
     function mint(address account, uint256 id, uint256 amount, bytes memory data) public onlyOwner {
-        count++;
         _mint(account, id, amount, data);
     }
 
     function getCollectibleURI(uint256 id) external view returns (string memory) {
-        require(id <= count, "NFT doesn't exist");
-
         if (bytes(this.uri(id)).length == 0) {
             return "";
         }
