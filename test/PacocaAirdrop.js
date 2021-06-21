@@ -4,7 +4,7 @@ describe('Airdrop Contract', () => {
     let OneInch, oneInch,
         BnbSwap, bnbSwap,
         Pacoca, pacoca,
-        PacocaNFTs, pacocaNFTs,
+        PacocaCollectibles, pacocaCollectibles,
         PacocaAirdrop, pacocaAirdrop,
         wallets
 
@@ -18,15 +18,15 @@ describe('Airdrop Contract', () => {
         Pacoca = await ethers.getContractFactory('Pacoca')
         pacoca = await Pacoca.deploy()
 
-        PacocaNFTs = await ethers.getContractFactory('PacocaNFTs')
-        pacocaNFTs = await PacocaNFTs.deploy()
+        PacocaCollectibles = await ethers.getContractFactory('PacocaCollectibles')
+        pacocaCollectibles = await PacocaCollectibles.deploy()
 
         PacocaAirdrop = await ethers.getContractFactory('PacocaAirdrop')
         pacocaAirdrop = await PacocaAirdrop.deploy(
             oneInch.address,
             bnbSwap.address,
             pacoca.address,
-            pacocaNFTs.address,
+            pacocaCollectibles.address,
         )
 
         wallets = await ethers.getSigners()
