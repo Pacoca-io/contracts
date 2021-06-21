@@ -4,10 +4,9 @@
         "test": "npx hardhat test",
         "build": "npx hardhat compile",
         "node": "npx hardhat node",
-        "deploy:local": "npx hardhat run --network localhost scripts/deploy.js > deploy-logs.local.txt",
-        "deploy:bsc:test": "npx hardhat run --network bscTest scripts/deploy.js > deploy-logs.txt",
-        "deploy:bsc": "npx hardhat run --network bsc scripts/deploy.js > deploy-logs.txt",
-        "strat:bsc": "npx hardhat run --network bsc scripts/deploy-strat.js"
+        "deploy": "npx hardhat run --network bsc scripts/deploy.js > deploy-logs.txt",
+        "deploy:strat": "npx hardhat run --network bsc scripts/deploy-strat.js",
+        "deploy:single": "npx hardhat run --network bsc scripts/deploy-single.js"
     },
     "devDependencies": {
         "@nomiclabs/hardhat-ethers": "^2.0.2",

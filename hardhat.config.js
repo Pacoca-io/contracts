@@ -5,7 +5,6 @@ require('dotenv').config()
  */
 
 require('@nomiclabs/hardhat-waffle')
-require('hardhat-abi-exporter')
 require('hardhat-gas-reporter')
 
 module.exports = {
