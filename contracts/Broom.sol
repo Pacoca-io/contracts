@@ -34,6 +34,10 @@ contract Broom is Ownable {
 
     event SetBuyBackRate(uint _buyBackRate);
 
+    constructor (address _owner) public {
+        transferOwnership(_owner);
+    }
+
     function sweep(
         address _router,
         address _connector,
