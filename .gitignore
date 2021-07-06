@@ -1,7 +1,5 @@
 node_modules
 .idea
-.env
-.env
 
 # Hardhat generated files
 cache
