@@ -48,24 +48,20 @@ contract Broom is Ownable {
 
         require(length == _amounts.length, "Sweep: Arr with != lengths");
 
-        uint balance = 0;
-
         for (uint index = 0; index < length; ++index) {
             _approveTokenIfNeeded(_tokens[index], _router);
 
             IERC20(_tokens[index]).safeTransferFrom(msg.sender, address(this), _amounts[index]);
 
-            balance = balance.add(
-                _swap(
-                    _router,
-                    _connector,
-                    _tokens[index],
-                    _amounts[index],
-                    address(this)
-                )
+            _swap(
+                _router,
+                _connector,
+                _tokens[index],
+                IERC20(_tokens[index]).balanceOf(address(this))
             );
         }
 
+        uint balance = IERC20(PACOCA).balanceOf(address(this));
         uint buyBackAmount = balance.mul(buyBackRate).div(buyBackRateMax);
 
         _safePACOCATransfer(buyBackAddress, buyBackAmount);
@@ -82,11 +78,10 @@ contract Broom is Ownable {
         address _router,
         address _connector,
         address _fromToken,
-        uint _amount,
-        address _receiver
-    ) private returns (uint) {
+        uint _amount
+    ) private {
         if (_fromToken == PACOCA) {
-            return _amount;
+            return;
         }
 
         address[] memory path;
@@ -104,15 +99,13 @@ contract Broom is Ownable {
             path[2] = PACOCA;
         }
 
-        uint[] memory amounts = IPancakeRouter02(_router).swapExactTokensForTokens(
+        IPancakeRouter02(_router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amount, // input
             0, // min output
             path, // path
-            _receiver, // to
+            address(this), // to
             block.timestamp // deadline
         );
-
-        return amounts[amounts.length - 1];
     }
 
     function setBuyBackRate(uint _buyBackRate) external onlyOwner {
