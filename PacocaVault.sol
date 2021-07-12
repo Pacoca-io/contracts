@@ -80,7 +80,6 @@ contract PacocaVault is Ownable, Pausable {
      * @notice Checks if the msg.sender is a contract or a proxy
      */
     modifier notContract() {
-        require(!_isContract(msg.sender), "contract not allowed");
         require(msg.sender == tx.origin, "proxy contract not allowed");
         _;
     }
