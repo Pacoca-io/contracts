@@ -42,13 +42,10 @@ contract Broom is Ownable {
         address _router,
         address _connector,
         address[] calldata _tokens,
-        uint[] calldata _amounts
+        uint[] calldata _amounts,
+        uint[] calldata _amountsOutMin
     ) external {
-        uint256 length = _tokens.length;
-
-        require(length == _amounts.length, "Sweep: Arr with != lengths");
-
-        for (uint index = 0; index < length; ++index) {
+        for (uint index = 0; index < _tokens.length; ++index) {
             _approveTokenIfNeeded(_tokens[index], _router);
 
             IERC20(_tokens[index]).safeTransferFrom(msg.sender, address(this), _amounts[index]);
@@ -57,7 +54,8 @@ contract Broom is Ownable {
                 _router,
                 _connector,
                 _tokens[index],
-                IERC20(_tokens[index]).balanceOf(address(this))
+                IERC20(_tokens[index]).balanceOf(address(this)),
+                _amountsOutMin[index]
             );
         }
 
@@ -78,7 +76,8 @@ contract Broom is Ownable {
         address _router,
         address _connector,
         address _fromToken,
-        uint _amount
+        uint _amount,
+        uint _amountOutMin
     ) private {
         if (_fromToken == PACOCA) {
             return;
@@ -100,8 +99,8 @@ contract Broom is Ownable {
         }
 
         IPancakeRouter02(_router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _amount, // input
-            0, // min output
+            _amount, // input amount
+            _amountOutMin, // min output amount
             path, // path
             address(this), // to
             block.timestamp // deadline
