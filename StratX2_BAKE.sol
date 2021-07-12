@@ -53,7 +53,6 @@ contract StratX2_BAKE is StratX2 {
         controllerFee = _controllerFee;
         rewardsAddress = _addresses[10];
         buyBackRate = _buyBackRate;
-        buyBackAddress = _addresses[11];
         entranceFeeFactor = _entranceFeeFactor;
         withdrawFeeFactor = _withdrawFeeFactor;
 
