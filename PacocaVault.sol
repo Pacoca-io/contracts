@@ -112,7 +112,7 @@ contract PacocaVault is Ownable, Pausable {
     /**
      * @notice Withdraws all funds for a user
      */
-    function withdrawAll() external notContract {
+    function withdrawAll() external {
         withdraw(userInfo[msg.sender].shares);
     }
 
