@@ -71,7 +71,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         address strat; // Strategy address that will PACOCA compound want tokens
     }
 
-    address public PACOCA;
+    address public immutable PACOCA;
 
     address constant public burnAddress = 0x000000000000000000000000000000000000dEaD;
 
@@ -79,7 +79,7 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
 
     uint256 public maxSupply = 100000000e18;
     uint256 public PACOCAPerBlock = 2e18; // PACOCA tokens created per block
-    uint256 public startBlock = 0; // https://bscscan.com/block/countdown/7862758
+    uint256 public immutable startBlock = 0; // https://bscscan.com/block/countdown/7862758
 
     PoolInfo[] public poolInfo; // Info of each pool.
     mapping(IERC20 => bool) public availableAssets; // Info of each pool.
