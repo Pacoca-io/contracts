@@ -30,18 +30,16 @@ contract PacocaVault is Ownable, Pausable {
     address public treasury;
 
     uint256 public constant MAX_PERFORMANCE_FEE = 500; // 5%
-    uint256 public constant MAX_CALL_FEE = 100; // 1%
     uint256 public constant MAX_WITHDRAW_FEE = 100; // 1%
     uint256 public constant MAX_WITHDRAW_FEE_PERIOD = 72 hours; // 3 days
 
     uint256 public performanceFee = 200; // 2%
-    uint256 public callFee = 25; // 0.25%
     uint256 public withdrawFee = 10; // 0.1%
     uint256 public withdrawFeePeriod = 72 hours; // 3 days
 
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
-    event Harvest(address indexed sender, uint256 performanceFee, uint256 callFee);
+    event Harvest(address indexed sender, uint256 performanceFee);
     event Pause();
     event Unpause();
 
@@ -125,14 +123,11 @@ contract PacocaVault is Ownable, Pausable {
         uint256 currentPerformanceFee = bal.mul(performanceFee).div(10000);
         token.safeTransfer(treasury, currentPerformanceFee);
 
-        uint256 currentCallFee = bal.mul(callFee).div(10000);
-        token.safeTransfer(msg.sender, currentCallFee);
-
         _earn();
 
         lastHarvestedTime = block.timestamp;
 
-        emit Harvest(msg.sender, currentPerformanceFee, currentCallFee);
+        emit Harvest(msg.sender, currentPerformanceFee);
     }
 
     /**
@@ -151,15 +146,6 @@ contract PacocaVault is Ownable, Pausable {
     function setPerformanceFee(uint256 _performanceFee) external onlyOwner {
         require(_performanceFee <= MAX_PERFORMANCE_FEE, "performanceFee cannot be more than MAX_PERFORMANCE_FEE");
         performanceFee = _performanceFee;
-    }
-
-    /**
-     * @notice Sets call fee
-     * @dev Only callable by the contract owner.
-     */
-    function setCallFee(uint256 _callFee) external onlyOwner {
-        require(_callFee <= MAX_CALL_FEE, "callFee cannot be more than MAX_CALL_FEE");
-        callFee = _callFee;
     }
 
     /**
@@ -217,18 +203,6 @@ contract PacocaVault is Ownable, Pausable {
     function unpause() external onlyOwner whenPaused {
         _unpause();
         emit Unpause();
-    }
-
-    /**
-     * @notice Calculates the expected harvest reward from third party
-     * @return Expected reward to collect in PACOCA
-     */
-    function calculateHarvestPacocaRewards() external view returns (uint256) {
-        uint256 amount = PacocaFarm(masterchef).pendingPACOCA(0, address(this));
-        amount = amount.add(available());
-        uint256 currentCallFee = amount.mul(callFee).div(10000);
-
-        return currentCallFee;
     }
 
     /**
