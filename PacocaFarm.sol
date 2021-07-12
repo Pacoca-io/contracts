@@ -280,11 +280,15 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
     // Safe PACOCA transfer function, just in case if rounding error causes pool to not have enough
     function safePACOCATransfer(address _to, uint256 _PACOCAAmt) internal {
         uint256 PACOCABal = IERC20(PACOCA).balanceOf(address(this));
+        bool transferSuccess = false;
+
         if (_PACOCAAmt > PACOCABal) {
-            IERC20(PACOCA).transfer(_to, PACOCABal);
+            transferSuccess = IERC20(PACOCA).transfer(_to, PACOCABal);
         } else {
-            IERC20(PACOCA).transfer(_to, _PACOCAAmt);
+            transferSuccess = IERC20(PACOCA).transfer(_to, _PACOCAAmt);
         }
+
+        require(transferSuccess, "safePACOCATransfer: transfer failed");
     }
 
     /*
