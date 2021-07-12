@@ -14,8 +14,8 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public wantAddress;
-    address public pacocaFarmAddress;
+    address public immutable wantAddress;
+    address public immutable pacocaFarmAddress;
 
     // Total want tokens managed by strategy
     uint256 public wantLockedTotal = 0;
