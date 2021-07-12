@@ -27,7 +27,6 @@ contract PacocaVault is Ownable, Pausable {
 
     uint256 public totalShares;
     uint256 public lastHarvestedTime;
-    address public admin;
     address public treasury;
 
     uint256 public constant MAX_PERFORMANCE_FEE = 500; // 5%
@@ -50,30 +49,23 @@ contract PacocaVault is Ownable, Pausable {
      * @notice Constructor
      * @param _token: Pacoca token contract
      * @param _masterchef: MasterChef contract
-     * @param _admin: address of the admin
+     * @param _owner: address of the owner
      * @param _treasury: address of the treasury (collects fees)
      */
     constructor(
         IERC20 _token,
         PacocaFarm _masterchef,
-        address _admin,
+        address _owner,
         address _treasury
     ) public {
         token = _token;
         masterchef = _masterchef;
-        admin = _admin;
         treasury = _treasury;
+
+        transferOwnership(_owner);
 
         // Infinite approve
         IERC20(_token).safeApprove(address(_masterchef), uint256(-1));
-    }
-
-    /**
-     * @notice Checks if the msg.sender is the admin address
-     */
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "admin: wut?");
-        _;
     }
 
     /**
@@ -144,15 +136,6 @@ contract PacocaVault is Ownable, Pausable {
     }
 
     /**
-     * @notice Sets admin address
-     * @dev Only callable by the contract owner.
-     */
-    function setAdmin(address _admin) external onlyOwner {
-        require(_admin != address(0), "Cannot be zero address");
-        admin = _admin;
-    }
-
-    /**
      * @notice Sets treasury address
      * @dev Only callable by the contract owner.
      */
@@ -163,36 +146,36 @@ contract PacocaVault is Ownable, Pausable {
 
     /**
      * @notice Sets performance fee
-     * @dev Only callable by the contract admin.
+     * @dev Only callable by the contract owner.
      */
-    function setPerformanceFee(uint256 _performanceFee) external onlyAdmin {
+    function setPerformanceFee(uint256 _performanceFee) external onlyOwner {
         require(_performanceFee <= MAX_PERFORMANCE_FEE, "performanceFee cannot be more than MAX_PERFORMANCE_FEE");
         performanceFee = _performanceFee;
     }
 
     /**
      * @notice Sets call fee
-     * @dev Only callable by the contract admin.
+     * @dev Only callable by the contract owner.
      */
-    function setCallFee(uint256 _callFee) external onlyAdmin {
+    function setCallFee(uint256 _callFee) external onlyOwner {
         require(_callFee <= MAX_CALL_FEE, "callFee cannot be more than MAX_CALL_FEE");
         callFee = _callFee;
     }
 
     /**
      * @notice Sets withdraw fee
-     * @dev Only callable by the contract admin.
+     * @dev Only callable by the contract owner.
      */
-    function setWithdrawFee(uint256 _withdrawFee) external onlyAdmin {
+    function setWithdrawFee(uint256 _withdrawFee) external onlyOwner {
         require(_withdrawFee <= MAX_WITHDRAW_FEE, "withdrawFee cannot be more than MAX_WITHDRAW_FEE");
         withdrawFee = _withdrawFee;
     }
 
     /**
      * @notice Sets withdraw fee period
-     * @dev Only callable by the contract admin.
+     * @dev Only callable by the contract owner.
      */
-    function setWithdrawFeePeriod(uint256 _withdrawFeePeriod) external onlyAdmin {
+    function setWithdrawFeePeriod(uint256 _withdrawFeePeriod) external onlyOwner {
         require(
             _withdrawFeePeriod <= MAX_WITHDRAW_FEE_PERIOD,
             "withdrawFeePeriod cannot be more than MAX_WITHDRAW_FEE_PERIOD"
@@ -202,16 +185,16 @@ contract PacocaVault is Ownable, Pausable {
 
     /**
      * @notice Withdraws from MasterChef to Vault without caring about rewards.
-     * @dev EMERGENCY ONLY. Only callable by the contract admin.
+     * @dev EMERGENCY ONLY. Only callable by the contract owner.
      */
-    function emergencyWithdraw() external onlyAdmin {
+    function emergencyWithdraw() external onlyOwner {
         PacocaFarm(masterchef).emergencyWithdraw(0);
     }
 
     /**
      * @notice Withdraw unexpected tokens sent to the Pacoca Vault
      */
-    function inCaseTokensGetStuck(address _token) external onlyAdmin {
+    function inCaseTokensGetStuck(address _token) external onlyOwner {
         require(_token != address(token), "Token cannot be same as deposit token");
 
         uint256 amount = IERC20(_token).balanceOf(address(this));
@@ -222,7 +205,7 @@ contract PacocaVault is Ownable, Pausable {
      * @notice Triggers stopped state
      * @dev Only possible when contract not paused.
      */
-    function pause() external onlyAdmin whenNotPaused {
+    function pause() external onlyOwner whenNotPaused {
         _pause();
         emit Pause();
     }
@@ -231,7 +214,7 @@ contract PacocaVault is Ownable, Pausable {
      * @notice Returns to normal state
      * @dev Only possible when contract is paused.
      */
-    function unpause() external onlyAdmin whenPaused {
+    function unpause() external onlyOwner whenPaused {
         _unpause();
         emit Unpause();
     }
