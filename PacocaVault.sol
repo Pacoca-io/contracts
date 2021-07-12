@@ -42,6 +42,10 @@ contract PacocaVault is Ownable, Pausable {
     event Harvest(address indexed sender, uint256 performanceFee);
     event Pause();
     event Unpause();
+    event SetTreasury(address treasury);
+    event SetPerformanceFee(uint256 performanceFee);
+    event SetWithdrawFee(uint256 withdrawFee);
+    event SetWithdrawFeePeriod(uint256 withdrawFeePeriod);
 
     /**
      * @notice Constructor
@@ -136,7 +140,10 @@ contract PacocaVault is Ownable, Pausable {
      */
     function setTreasury(address _treasury) external onlyOwner {
         require(_treasury != address(0), "Cannot be zero address");
+
         treasury = _treasury;
+
+        emit SetTreasury(treasury);
     }
 
     /**
@@ -145,7 +152,10 @@ contract PacocaVault is Ownable, Pausable {
      */
     function setPerformanceFee(uint256 _performanceFee) external onlyOwner {
         require(_performanceFee <= MAX_PERFORMANCE_FEE, "performanceFee cannot be more than MAX_PERFORMANCE_FEE");
+
         performanceFee = _performanceFee;
+
+        emit SetPerformanceFee(performanceFee);
     }
 
     /**
@@ -154,7 +164,10 @@ contract PacocaVault is Ownable, Pausable {
      */
     function setWithdrawFee(uint256 _withdrawFee) external onlyOwner {
         require(_withdrawFee <= MAX_WITHDRAW_FEE, "withdrawFee cannot be more than MAX_WITHDRAW_FEE");
+
         withdrawFee = _withdrawFee;
+
+        emit SetWithdrawFee(withdrawFee);
     }
 
     /**
@@ -166,7 +179,10 @@ contract PacocaVault is Ownable, Pausable {
             _withdrawFeePeriod <= MAX_WITHDRAW_FEE_PERIOD,
             "withdrawFeePeriod cannot be more than MAX_WITHDRAW_FEE_PERIOD"
         );
+
         withdrawFeePeriod = _withdrawFeePeriod;
+
+        emit SetWithdrawFeePeriod(withdrawFeePeriod);
     }
 
     /**
