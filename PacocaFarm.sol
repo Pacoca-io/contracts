@@ -88,11 +88,10 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(
-        address indexed user,
-        uint256 indexed pid,
-        uint256 amount
-    );
+    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event SetAllocPoint(uint256 indexed _pid, uint256 _oldAllocPoint, uint256 _allocPoint);
+    event SetMaxSupply(uint256 oldSupply, uint256 newSupply);
+    event SetPacocaPerBlock(uint256 oldPacocaPerBlock, uint256 pacocaPerBlock);
 
     constructor(address _pacoca, uint256 _startBlock) public {
         PACOCA = _pacoca;
@@ -332,18 +331,32 @@ contract PacocaFarm is Ownable, ReentrancyGuard {
         if (_withUpdate) {
             massUpdatePools();
         }
+
+        uint256 oldAllocPoint = poolInfo[_pid].allocPoint;
+
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
         );
+
         poolInfo[_pid].allocPoint = _allocPoint;
+
+        emit SetAllocPoint(_pid, oldAllocPoint, _allocPoint);
     }
 
     function setMaxSupply(uint256 _maxSupply) public onlyOwner {
+        uint256 oldMaxSupply = maxSupply;
+
         maxSupply = _maxSupply;
+
+        emit SetMaxSupply(oldMaxSupply, maxSupply);
     }
 
     function setPacocaPerBlock(uint256 _PACOCAPerBlock) public onlyOwner {
+        uint256 oldPacocaPerBlock = PACOCAPerBlock;
+
         PACOCAPerBlock = _PACOCAPerBlock;
+
+        emit SetPacocaPerBlock(oldPacocaPerBlock, PACOCAPerBlock);
     }
 
     function inCaseTokensGetStuck(address _token, uint256 _amount) external onlyOwner {
