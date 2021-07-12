@@ -51,7 +51,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     uint256 public buyBackRate = 0; // 250;
     uint256 public constant buyBackRateMax = 10000; // 100 = 1%
     uint256 public constant buyBackRateUL = 800;
-    address public buyBackAddress = 0x000000000000000000000000000000000000dEaD;
+    address public constant buyBackAddress = 0x000000000000000000000000000000000000dEaD;
     address public rewardsAddress;
 
     uint256 public entranceFeeFactor = 9990; // < 0.1% entrance fee - goes to pool + prevents front-running
@@ -82,7 +82,6 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     event SetGov(address _govAddress);
     event SetOnlyGov(bool _onlyGov);
     event SetUniRouterAddress(address _uniRouterAddress);
-    event SetBuyBackAddress(address _buyBackAddress);
     event SetRewardsAddress(address _rewardsAddress);
 
     modifier onlyAllowGov() {
@@ -426,13 +425,6 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     ) external virtual onlyAllowGov {
         uniRouterAddress = _uniRouterAddress;
         emit SetUniRouterAddress(_uniRouterAddress);
-    }
-
-    function setBuyBackAddress(
-        address _buyBackAddress
-    ) external virtual onlyAllowGov {
-        buyBackAddress = _buyBackAddress;
-        emit SetBuyBackAddress(_buyBackAddress);
     }
 
     function setRewardsAddress(
