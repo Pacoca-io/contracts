@@ -23,7 +23,7 @@ import "./interfaces/IPancakeswapFarm.sol";
 import "./interfaces/IPancakeRouter01.sol";
 import "./interfaces/IAutoPacoca.sol";
 
-contract PacocaMaximizer is Ownable, ReentrancyGuard {
+contract SweetVault is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
