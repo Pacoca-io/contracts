@@ -49,7 +49,6 @@ contract PacocaMaximizer is Ownable, ReentrancyGuard {
     mapping(address => UserInfo) public userInfo; // Info of users
     //    uint256 public totalStake; // Amount of staked tokens
     uint256 public accSharesPerStakedToken; // Accumulated AUTO_PACOCA shares per staked token, times 1e12.
-    uint256 public lastHarvestBlock;
 
     // Farm info
     IPancakeswapFarm immutable public STAKED_TOKEN_FARM;
@@ -99,11 +98,6 @@ contract PacocaMaximizer is Ownable, ReentrancyGuard {
     // 5. Stake to pacoca pool
     // TODO onlyBot
     function earn(uint256 _minPacocaOutput) external {
-        require(
-            block.number <= lastHarvestBlock,
-            "PacocaMaximizer: Sorry, you're late"
-        );
-
         // Claim rewards
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(0);
@@ -127,8 +121,6 @@ contract PacocaMaximizer is Ownable, ReentrancyGuard {
         accSharesPerStakedToken = accSharesPerStakedToken.add(
             currentShares.sub(previousShares).mul(1e12).div(_totalStake())
         );
-
-        lastHarvestBlock = block.number;
     }
 
     //    function pendingPACOCA(address _user) external view returns (uint256) {
