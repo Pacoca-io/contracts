@@ -42,7 +42,7 @@ contract PacocaMaximizer is Ownable, ReentrancyGuard {
     address constant public BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     address constant public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     IERC20 constant public PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
-    AutoPacoca constant public AUTO_PACOCA = AutoPacoca(0x55410D946DFab292196462ca9BE9f3E4E4F337Dd);
+    AutoPacoca immutable public AUTO_PACOCA;
     IERC20 immutable public STAKED_TOKEN;
 
     // Runtime data
@@ -69,14 +69,17 @@ contract PacocaMaximizer is Ownable, ReentrancyGuard {
     event Deposit(address indexed user, uint256 amount);
 
     constructor(
+        address _autoPacoca,
         address _stakedToken,
         address _stakedTokenFarm,
         address _rewardToken,
         uint256 _farmPid,
         bool _isCakeStaking,
         address _router,
-        address[] memory _path
+        address[] memory _path,
+        address _owner
     ) public {
+        AUTO_PACOCA = AutoPacoca(_autoPacoca);
         STAKED_TOKEN = IERC20(_stakedToken);
         STAKED_TOKEN_FARM = IPancakeswapFarm(_stakedTokenFarm);
         REWARD_TOKEN = IERC20(_rewardToken);
@@ -85,6 +88,8 @@ contract PacocaMaximizer is Ownable, ReentrancyGuard {
 
         router = IPancakeRouter01(_router);
         path = _path;
+
+        transferOwnership(_owner);
     }
 
     // 1. Harvest rewards
