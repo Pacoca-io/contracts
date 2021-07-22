@@ -5,9 +5,7 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
-// TODO use interface
-import "./PacocaFarm.sol";
+import "./interfaces/IPacocaFarm.sol";
 
 contract AutoPacoca is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -22,7 +20,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
 
     IERC20 public immutable token; // Pacoca token
 
-    PacocaFarm public immutable masterchef;
+    IPacocaFarm public immutable masterchef;
 
     mapping(address => UserInfo) public userInfo;
 
@@ -42,7 +40,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      */
     constructor(
         IERC20 _token,
-        PacocaFarm _masterchef,
+        IPacocaFarm _masterchef,
         address _owner
     ) public {
         token = _token;
@@ -74,7 +72,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
             "AutoPacoca: Rewards already harvested"
         );
 
-        PacocaFarm(masterchef).withdraw(0, 0);
+        IPacocaFarm(masterchef).withdraw(0, 0);
 
         _earn();
 
@@ -128,7 +126,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
         uint256 bal = available();
         if (bal < currentAmount) {
             uint256 balWithdraw = currentAmount.sub(bal);
-            PacocaFarm(masterchef).withdraw(0, balWithdraw);
+            IPacocaFarm(masterchef).withdraw(0, balWithdraw);
             uint256 balAfter = available();
             uint256 diff = balAfter.sub(bal);
             if (diff < balWithdraw) {
@@ -159,7 +157,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @return Returns total pending Pacoca rewards
      */
     function calculateTotalPendingPacocaRewards() external view returns (uint256) {
-        uint256 amount = PacocaFarm(masterchef).pendingPACOCA(0, address(this));
+        uint256 amount = IPacocaFarm(masterchef).pendingPACOCA(0, address(this));
         amount = amount.add(available());
 
         return amount;
@@ -185,14 +183,9 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @dev It includes tokens held by the contract and held in MasterChef
      */
     function underlyingTokenBalance() public view returns (uint256) {
-        (uint256 amount,) = PacocaFarm(masterchef).userInfo(0, address(this));
+        (uint256 amount,) = IPacocaFarm(masterchef).userInfo(0, address(this));
 
         return token.balanceOf(address(this)).add(amount);
-    }
-
-    // TODO check if this is necessary
-    function balanceOf(address _user) external view returns (uint256) {
-        return userInfo[_user].shares.mul(getPricePerFullShare()).div(1e18);
     }
 
     function sharesOf(address _user) external view returns (uint256) {
@@ -212,7 +205,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
         uint256 bal = available();
 
         if (bal > 0) {
-            PacocaFarm(masterchef).deposit(0, bal);
+            IPacocaFarm(masterchef).deposit(0, bal);
         }
     }
 }
