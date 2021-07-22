@@ -45,7 +45,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
     // Runtime data
     mapping(address => UserInfo) public userInfo; // Info of users
-    //    uint256 public totalStake; // Amount of staked tokens
     uint256 public accSharesPerStakedToken; // Accumulated AUTO_PACOCA shares per staked token, times 1e18.
 
     // Farm info
@@ -64,6 +63,11 @@ contract SweetVault is Ownable, ReentrancyGuard {
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event ClaimRewards(address indexed user, uint256 shares, uint256 amount);
+
+    // Setting updates
+    event SetRouter(address oldRouter, address newRouter);
+    event SetPath(address[] oldPath, address[] newPath);
+    event SetBuyBackRate(uint256 oldBuyBackRate, uint256 newBuyBackRate);
 
     constructor(
         address _autoPacoca,
@@ -96,7 +100,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
     // 5. Stake to pacoca pool
     // TODO onlyBot
     function earn(uint256 _minPacocaOutput) external {
-        // Claim rewards
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(0);
         } else {
@@ -129,7 +132,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     function deposit(uint256 _amount) external nonReentrant {
-        require(_amount > 0, "PacocaMaximizer: amount must be greater than zero");
+        require(_amount > 0, "SweetVault: amount must be greater than zero");
 
         UserInfo storage user = userInfo[msg.sender];
 
@@ -151,7 +154,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
             STAKED_TOKEN_FARM.deposit(FARM_PID, _amount);
         }
 
-        // TODO check if rewardDebt is correct
         user.pacocaShares = user.pacocaShares.add(
             user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
                 user.rewardDebt
@@ -166,8 +168,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
     function withdraw(uint256 _amount) external nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
 
-        require(_amount > 0, "PacocaMaximizer: amount must be greater than zero");
-        require(user.stake >= _amount, "PacocaMaximizer: withdraw amount exceeds balance");
+        require(_amount > 0, "SweetVault: amount must be greater than zero");
+        require(user.stake >= _amount, "SweetVault: withdraw amount exceeds balance");
 
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(_amount);
@@ -200,7 +202,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     function _claimRewards(uint256 _shares) private {
         UserInfo storage user = userInfo[msg.sender];
 
-        require(user.pacocaShares >= _shares, "PacocaMaximizer: claim amount exceeds balance");
+        require(user.pacocaShares >= _shares, "SweetVault: claim amount exceeds balance");
 
         user.pacocaShares = user.pacocaShares.sub(_shares);
 
@@ -239,8 +241,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
         rewardShares = user.pacocaShares.add(pendingShares);
         rewards = rewardShares.mul(AUTO_PACOCA.getPricePerFullShare()).div(1e18);
     }
-
-    // TODO add update path, router, buyback, slippageFactor function
 
     function _approveTokenIfNeeded(
         IERC20 _token,
@@ -295,5 +295,31 @@ contract SweetVault is Ownable, ReentrancyGuard {
             address(this), // to
             block.timestamp // deadline
         );
+    }
+
+    function setRouter(address _router) public onlyOwner {
+        address oldRouter = address(router);
+
+        router = IPancakeRouter01(_router);
+
+        emit SetRouter(oldRouter, _router);
+    }
+
+    function setPath(address[] memory _path) public onlyOwner {
+        address[] memory oldPath = path;
+
+        path = _path;
+
+        emit SetPath(oldPath, _path);
+    }
+
+    function setBuyBackRate(uint256 _buyBackRate) public onlyOwner {
+        require(_buyBackRate <= buyBackRateUL, "SweetVault: BuyBackRate too high");
+
+        uint256 oldBuyBackRate = buyBackRate;
+
+        buyBackRate = _buyBackRate;
+
+        emit SetBuyBackRate(oldBuyBackRate, _buyBackRate);
     }
 }
