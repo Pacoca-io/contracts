@@ -206,7 +206,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         // Withdraw pacoca rewards if user leaves
         if (user.stake == 0 && user.pacocaShares > 0) {
-            _claimRewards(user.pacocaShares);
+            _claimRewards(user.pacocaShares, false);
         }
 
         STAKED_TOKEN.safeTransfer(msg.sender, _amount);
@@ -215,11 +215,21 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     function claimRewards(uint256 _shares) public nonReentrant {
-        _claimRewards(_shares);
+        _claimRewards(_shares, true);
     }
 
-    function _claimRewards(uint256 _shares) private {
+    function _claimRewards(uint256 _shares, bool _update) private {
         UserInfo storage user = userInfo[msg.sender];
+
+        if (_update) {
+            user.pacocaShares = user.pacocaShares.add(
+                user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
+                    user.rewardDebt
+                )
+            );
+
+            user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
+        }
 
         require(user.pacocaShares >= _shares, "SweetVault: claim amount exceeds balance");
 
