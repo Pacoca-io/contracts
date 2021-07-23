@@ -57,6 +57,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
     IPancakeRouter01 public router;
     address[] public path; // Path from staked token to PACOCA
     address public keeper;
+    uint256 public keeperFee = 50; // 0.5%
+    uint256 public constant keeperFeeUL = 100; // 1%
     uint256 public buyBackRate = 300; // 3%
     uint256 public constant buyBackRateUL = 800; // 8%
 
@@ -69,6 +71,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     event SetPath(address[] oldPath, address[] newPath);
     event SetBuyBackRate(uint256 oldBuyBackRate, uint256 newBuyBackRate);
     event SetKeeper(address oldKeeper, address newKeeper);
+    event SetKeeperFee(address oldKeeperFee, address newKeeperFee);
 
     constructor(
         address _autoPacoca,
@@ -320,7 +323,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         path = _path;
 
-        emit SetPath(oldPath, _path);
+        emit SetPath(oldPath, path);
     }
 
     function setKeeper(address _keeper) public onlyOwner {
@@ -331,6 +334,16 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit SetKeeper(oldKeeper, keeper);
     }
 
+    function setKeeperFee(uint256 _keeperFee) public onlyOwner {
+        require(_keeperFee <= keeperFeeUL, "SweetVault: Keeper fee too high");
+
+        uint256 oldKeeperFee = keeperFee;
+
+        keeperFee = _keeperFee;
+
+        emit SetBuyBackRate(oldKeeperFee, keeperFee);
+    }
+
     function setBuyBackRate(uint256 _buyBackRate) public onlyOwner {
         require(_buyBackRate <= buyBackRateUL, "SweetVault: BuyBackRate too high");
 
@@ -338,6 +351,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         buyBackRate = _buyBackRate;
 
-        emit SetBuyBackRate(oldBuyBackRate, _buyBackRate);
+        emit SetBuyBackRate(oldBuyBackRate, buyBackRate);
     }
 }
