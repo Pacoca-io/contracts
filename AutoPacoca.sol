@@ -25,7 +25,6 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
     mapping(address => UserInfo) public userInfo;
 
     uint256 public totalShares;
-    uint256 public lastHarvestBlock;
 
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
@@ -45,11 +44,8 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
     ) public {
         token = _token;
         masterchef = _masterchef;
-        transferOwnership(_owner);
 
-        // TODO use approve if needed
-        // Infinite approve
-        IERC20(_token).safeApprove(address(_masterchef), uint256(- 1));
+        transferOwnership(_owner);
     }
 
     /**
@@ -67,16 +63,9 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @notice Reinvests PACOCA tokens into MasterChef
      */
     function harvest() external {
-        require(
-            block.number <= lastHarvestBlock,
-            "AutoPacoca: Rewards already harvested"
-        );
-
-        IPacocaFarm(masterchef).withdraw(0, 0);
+        masterchef.withdraw(0, 0);
 
         _earn();
-
-        lastHarvestBlock = block.number;
 
         emit Harvest(msg.sender);
     }
@@ -126,7 +115,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
         uint256 bal = available();
         if (bal < currentAmount) {
             uint256 balWithdraw = currentAmount.sub(bal);
-            IPacocaFarm(masterchef).withdraw(0, balWithdraw);
+            masterchef.withdraw(0, balWithdraw);
             uint256 balAfter = available();
             uint256 diff = balAfter.sub(bal);
             if (diff < balWithdraw) {
@@ -157,7 +146,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @return Returns total pending Pacoca rewards
      */
     function calculateTotalPendingPacocaRewards() external view returns (uint256) {
-        uint256 amount = IPacocaFarm(masterchef).pendingPACOCA(0, address(this));
+        uint256 amount = masterchef.pendingPACOCA(0, address(this));
         amount = amount.add(available());
 
         return amount;
@@ -183,7 +172,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @dev It includes tokens held by the contract and held in MasterChef
      */
     function underlyingTokenBalance() public view returns (uint256) {
-        (uint256 amount,) = IPacocaFarm(masterchef).userInfo(0, address(this));
+        (uint256 amount,) = masterchef.userInfo(0, address(this));
 
         return token.balanceOf(address(this)).add(amount);
     }
@@ -202,10 +191,14 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @notice Deposits tokens into MasterChef to earn staking rewards
      */
     function _earn() internal {
-        uint256 bal = available();
+        uint256 balance = available();
 
-        if (bal > 0) {
-            IPacocaFarm(masterchef).deposit(0, bal);
+        if (balance > 0) {
+            if (token.allowance(address(this), address(masterchef)) < balance) {
+                token.safeApprove(address(masterchef), uint(- 1));
+            }
+
+            masterchef.deposit(0, balance);
         }
     }
 }
