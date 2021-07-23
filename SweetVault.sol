@@ -109,9 +109,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
     // 1. Harvest rewards
     // 2. Convert rewards to $PACOCA
-    // 3. Harvest pacoca pool rewards
-    // 4. Collect fees
-    // 5. Stake to pacoca pool
+    // 3. Collect fees
+    // 4. Stake to pacoca auto-compound vault
     function earn(uint256 _minPacocaOutput) external onlyKeeper {
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(0);
@@ -121,9 +120,16 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         _convertBalanceToPacoca(_minPacocaOutput);
 
+        uint256 balanceBeforeFees = _pacocaBalance();
+
         _safePACOCATransfer(
             BURN_ADDRESS,
-            _pacocaBalance().mul(buyBackRate).div(10000)
+            balanceBeforeFees.mul(buyBackRate).div(10000)
+        );
+
+        _safePACOCATransfer(
+            keeper,
+            balanceBeforeFees.mul(keeperFee).div(10000)
         );
 
         uint256 previousShares = AUTO_PACOCA.sharesOf(address(this));
