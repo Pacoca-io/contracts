@@ -56,6 +56,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     // Settings
     IPancakeRouter01 public router;
     address[] public path; // Path from staked token to PACOCA
+    address public treasury;
     address public keeper;
     uint256 public keeperFee = 50; // 0.5%
     uint256 public constant keeperFeeUL = 100; // 1%
@@ -70,6 +71,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     event SetRouter(address oldRouter, address newRouter);
     event SetPath(address[] oldPath, address[] newPath);
     event SetBuyBackRate(uint256 oldBuyBackRate, uint256 newBuyBackRate);
+    event SetTreasury(address oldTreasury, address newTreasury);
     event SetKeeper(address oldKeeper, address newKeeper);
     event SetKeeperFee(address oldKeeperFee, address newKeeperFee);
 
@@ -83,6 +85,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         address _router,
         address[] memory _path,
         address _owner,
+        address _treasury,
         address _keeper
     ) public {
         AUTO_PACOCA = IAutoPacoca(_autoPacoca);
@@ -96,6 +99,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         path = _path;
 
         transferOwnership(_owner);
+        treasury = _treasury;
         keeper = _keeper;
     }
 
@@ -128,7 +132,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         );
 
         _safePACOCATransfer(
-            keeper,
+            treasury,
             balanceBeforeFees.mul(keeperFee).div(10000)
         );
 
@@ -342,6 +346,14 @@ contract SweetVault is Ownable, ReentrancyGuard {
         path = _path;
 
         emit SetPath(oldPath, path);
+    }
+
+    function setTreasury(address _treasury) public onlyOwner {
+        address oldTreasury = treasury;
+
+        treasury = _treasury;
+
+        emit SetTreasury(oldTreasury, treasury);
     }
 
     function setKeeper(address _keeper) public onlyOwner {
