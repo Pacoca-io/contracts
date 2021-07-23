@@ -12,7 +12,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
     struct UserInfo {
-        bool isPacocaMaximizer; // only pacoca maximizer contracts are allowed to interact with some functions
+        bool isSweetVault; // only sweet vault contracts are allowed to interact with some functions
         uint256 shares; // number of shares for a user
         uint256 lastDepositedTime; // keeps track of deposited time for potential penalty
         uint256 pacocaAtLastUserAction; // keeps track of pacoca deposited at the last user action
@@ -30,7 +30,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
     event Harvest(address indexed sender);
-    event PacocaMaximizerAdded(address indexed maximizer);
+    event SweetVaultAdded(address vault);
 
     /**
      * @notice Constructor
@@ -53,12 +53,12 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Checks if the msg.sender is a pacoca maximizer contract
+     * @notice Checks if the msg.sender is a SweetVault contract
      */
-    modifier onlyPacocaMaximizer() {
+    modifier onlySweetVault() {
         require(
-            userInfo[msg.sender].isPacocaMaximizer,
-            "AutoPacoca: only pacoca maximizer is allowed"
+            userInfo[msg.sender].isSweetVault,
+            "AutoPacoca: only sweet vaults are allowed"
         );
         _;
     }
@@ -85,7 +85,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @notice Deposits funds into the Pacoca Vault
      * @param _amount: number of tokens to deposit (in PACOCA)
      */
-    function deposit(uint256 _amount) external onlyPacocaMaximizer nonReentrant {
+    function deposit(uint256 _amount) external onlySweetVault nonReentrant {
         require(_amount > 0, "Nothing to deposit");
 
         uint256 pool = underlyingTokenBalance();
@@ -114,7 +114,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @notice Withdraws from funds from the Pacoca Vault
      * @param _shares: Number of shares to withdraw
      */
-    function withdraw(uint256 _shares) public onlyPacocaMaximizer nonReentrant {
+    function withdraw(uint256 _shares) public onlySweetVault nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
         require(_shares > 0, "AutoPacoca: Nothing to withdraw");
         require(_shares <= user.shares, "AutoPacoca: Withdraw amount exceeds balance");
@@ -192,10 +192,10 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
         return userInfo[_user].shares;
     }
 
-    function addPacocaMaximizer(address _maximizer) external onlyOwner {
-        userInfo[_maximizer].isPacocaMaximizer = true;
+    function addSweetVault(address _vault) external onlyOwner {
+        userInfo[_vault].isSweetVault = true;
 
-        emit PacocaMaximizerAdded(_maximizer);
+        emit SweetVaultAdded(_vault);
     }
 
     /**
