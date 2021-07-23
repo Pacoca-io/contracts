@@ -230,7 +230,9 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     function getExpectedPacocaOutput() external view returns (uint256) {
-        uint256 rewards = _rewardTokenBalance().add(totalStake());
+        uint256 rewards = _rewardTokenBalance().add(
+            STAKED_TOKEN_FARM.pendingCake(FARM_PID, address(this))
+        );
 
         uint256[] memory amounts = router.getAmountsOut(rewards, path);
 
