@@ -56,9 +56,9 @@ contract SweetVault is Ownable, ReentrancyGuard {
     // Settings
     IPancakeRouter01 public router;
     address[] public path; // Path from staked token to PACOCA
-    uint256 public buyBackRate = 200; // 2%
+    address public keeper;
+    uint256 public buyBackRate = 300; // 3%
     uint256 public constant buyBackRateUL = 800; // 8%
-    uint256 public slippageFactor = 950; // 5% default slippage tolerance
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
@@ -68,6 +68,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     event SetRouter(address oldRouter, address newRouter);
     event SetPath(address[] oldPath, address[] newPath);
     event SetBuyBackRate(uint256 oldBuyBackRate, uint256 newBuyBackRate);
+    event SetKeeper(address oldKeeper, address newKeeper);
 
     constructor(
         address _autoPacoca,
@@ -78,7 +79,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
         bool _isCakeStaking,
         address _router,
         address[] memory _path,
-        address _owner
+        address _owner,
+        address _keeper
     ) public {
         AUTO_PACOCA = IAutoPacoca(_autoPacoca);
         STAKED_TOKEN = IERC20(_stakedToken);
@@ -91,6 +93,15 @@ contract SweetVault is Ownable, ReentrancyGuard {
         path = _path;
 
         transferOwnership(_owner);
+        keeper = _keeper;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the keeper.
+     */
+    modifier onlyKeeper() {
+        require(keeper == msg.sender, "SweetVault: caller is not the keeper");
+        _;
     }
 
     // 1. Harvest rewards
@@ -98,8 +109,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     // 3. Harvest pacoca pool rewards
     // 4. Collect fees
     // 5. Stake to pacoca pool
-    // TODO onlyBot
-    function earn(uint256 _minPacocaOutput) external {
+    function earn(uint256 _minPacocaOutput) external onlyKeeper {
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(0);
         } else {
@@ -311,6 +321,14 @@ contract SweetVault is Ownable, ReentrancyGuard {
         path = _path;
 
         emit SetPath(oldPath, _path);
+    }
+
+    function setKeeper(address _keeper) public onlyOwner {
+        address oldKeeper = keeper;
+
+        keeper = _keeper;
+
+        emit SetKeeper(oldKeeper, keeper);
     }
 
     function setBuyBackRate(uint256 _buyBackRate) public onlyOwner {
