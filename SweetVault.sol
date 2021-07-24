@@ -31,7 +31,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         // How many assets the user has provided.
         uint256 stake;
         // How many staked $PACOCA user had at his last action
-        uint256 pacocaShares;
+        uint256 autoPacocaShares;
         // Pacoca shares not entitled to the user
         uint256 rewardDebt;
         // Timestamp of last user deposit
@@ -51,7 +51,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
     // Farm info
     IPancakeswapFarm immutable public STAKED_TOKEN_FARM;
-    IERC20 immutable public REWARD_TOKEN;
+    IERC20 immutable public FARM_REWARD_TOKEN;
     uint256 immutable public FARM_PID;
     bool immutable IS_CAKE_STAKING;
 
@@ -86,7 +86,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         address _autoPacoca,
         address _stakedToken,
         address _stakedTokenFarm,
-        address _rewardToken,
+        address _farmRewardToken,
         uint256 _farmPid,
         bool _isCakeStaking,
         address _router,
@@ -98,7 +98,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         AUTO_PACOCA = IAutoPacoca(_autoPacoca);
         STAKED_TOKEN = IERC20(_stakedToken);
         STAKED_TOKEN_FARM = IPancakeswapFarm(_stakedTokenFarm);
-        REWARD_TOKEN = IERC20(_rewardToken);
+        FARM_REWARD_TOKEN = IERC20(_farmRewardToken);
         FARM_PID = _farmPid;
         IS_CAKE_STAKING = _isCakeStaking;
 
@@ -184,7 +184,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
             STAKED_TOKEN_FARM.deposit(FARM_PID, _amount);
         }
 
-        user.pacocaShares = user.pacocaShares.add(
+        user.autoPacocaShares = user.autoPacocaShares.add(
             user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
                 user.rewardDebt
             )
@@ -220,7 +220,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
             emit EarlyWithdraw(msg.sender, _amount, currentWithdrawFee);
         }
 
-        user.pacocaShares = user.pacocaShares.add(
+        user.autoPacocaShares = user.autoPacocaShares.add(
             user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
                 user.rewardDebt
             )
@@ -229,8 +229,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
         user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
 
         // Withdraw pacoca rewards if user leaves
-        if (user.stake == 0 && user.pacocaShares > 0) {
-            _claimRewards(user.pacocaShares, false);
+        if (user.stake == 0 && user.autoPacocaShares > 0) {
+            _claimRewards(user.autoPacocaShares, false);
         }
 
         STAKED_TOKEN.safeTransfer(msg.sender, currentAmount);
@@ -246,7 +246,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[msg.sender];
 
         if (_update) {
-            user.pacocaShares = user.pacocaShares.add(
+            user.autoPacocaShares = user.autoPacocaShares.add(
                 user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
                     user.rewardDebt
                 )
@@ -255,9 +255,9 @@ contract SweetVault is Ownable, ReentrancyGuard {
             user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
         }
 
-        require(user.pacocaShares >= _shares, "SweetVault: claim amount exceeds balance");
+        require(user.autoPacocaShares >= _shares, "SweetVault: claim amount exceeds balance");
 
-        user.pacocaShares = user.pacocaShares.sub(_shares);
+        user.autoPacocaShares = user.autoPacocaShares.sub(_shares);
 
         uint256 pricePerShare = AUTO_PACOCA.getPricePerFullShare();
         uint256 pacocaAmount = _shares.mul(pricePerShare).div(1e18);
@@ -283,8 +283,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
         address _user
     ) external view returns (
         uint256 stake,
-        uint256 rewards,
-        uint256 rewardShares
+        uint256 pacoca,
+        uint256 autoPacocaShares
     ) {
         UserInfo memory user = userInfo[_user];
 
@@ -293,8 +293,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
         );
 
         stake = user.stake;
-        rewardShares = user.pacocaShares.add(pendingShares);
-        rewards = rewardShares.mul(AUTO_PACOCA.getPricePerFullShare()).div(1e18);
+        autoPacocaShares = user.autoPacocaShares.add(pendingShares);
+        pacoca = autoPacocaShares.mul(AUTO_PACOCA.getPricePerFullShare()).div(1e18);
     }
 
     function _approveTokenIfNeeded(
@@ -308,15 +308,11 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     function _rewardTokenBalance() private view returns (uint256) {
-        return REWARD_TOKEN.balanceOf(address(this));
+        return FARM_REWARD_TOKEN.balanceOf(address(this));
     }
 
     function _pacocaBalance() private view returns (uint256) {
         return PACOCA.balanceOf(address(this));
-    }
-
-    function totalAutoPacocaShares() external view returns (uint256) {
-        return AUTO_PACOCA.sharesOf(address(this));
     }
 
     function totalStake() public view returns (uint256) {
@@ -338,7 +334,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         uint256 rewardTokenBalance = _rewardTokenBalance();
 
         _approveTokenIfNeeded(
-            REWARD_TOKEN,
+            FARM_REWARD_TOKEN,
             rewardTokenBalance,
             address(router)
         );
