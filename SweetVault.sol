@@ -34,6 +34,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
         uint256 pacocaShares;
         // Pacoca shares not entitled to the user
         uint256 rewardDebt;
+        // Timestamp of last user deposit
+        uint256 lastDepositedTime;
     }
 
     // Addresses
@@ -62,9 +64,13 @@ contract SweetVault is Ownable, ReentrancyGuard {
     uint256 public constant keeperFeeUL = 100; // 1%
     uint256 public buyBackRate = 300; // 3%
     uint256 public constant buyBackRateUL = 800; // 8%
+    uint256 public earlyWithdrawFee = 100; // 1%
+    uint256 public constant earlyWithdrawFeeUL = 300; // 3%
+    uint256 public constant withdrawFeePeriod = 3 days;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
+    event EarlyWithdraw(address indexed user, uint256 amount, uint256 fee);
     event ClaimRewards(address indexed user, uint256 shares, uint256 amount);
 
     // Setting updates
@@ -74,6 +80,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     event SetTreasury(address oldTreasury, address newTreasury);
     event SetKeeper(address oldKeeper, address newKeeper);
     event SetKeeperFee(address oldKeeperFee, address newKeeperFee);
+    event SetEarlyWithdrawFee(address oldEarlyWithdrawFee, address newEarlyWithdrawFee);
 
     constructor(
         address _autoPacoca,
@@ -184,6 +191,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         );
         user.stake = user.stake.add(_amount);
         user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
+        user.lastDepositedTime = block.timestamp;
 
         emit Deposit(msg.sender, _amount);
     }
@@ -200,6 +208,18 @@ contract SweetVault is Ownable, ReentrancyGuard {
             STAKED_TOKEN_FARM.withdraw(FARM_PID, _amount);
         }
 
+        uint256 currentAmount = _amount;
+
+        if (block.timestamp < user.lastDepositedTime.add(withdrawFeePeriod)) {
+            uint256 currentWithdrawFee = currentAmount.mul(earlyWithdrawFee).div(10000);
+
+            STAKED_TOKEN.safeTransfer(treasury, currentWithdrawFee);
+
+            currentAmount = currentAmount.sub(currentWithdrawFee);
+
+            emit EarlyWithdraw(msg.sender, _amount, currentWithdrawFee);
+        }
+
         user.pacocaShares = user.pacocaShares.add(
             user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
                 user.rewardDebt
@@ -213,9 +233,9 @@ contract SweetVault is Ownable, ReentrancyGuard {
             _claimRewards(user.pacocaShares, false);
         }
 
-        STAKED_TOKEN.safeTransfer(msg.sender, _amount);
+        STAKED_TOKEN.safeTransfer(msg.sender, currentAmount);
 
-        emit Withdraw(msg.sender, _amount);
+        emit Withdraw(msg.sender, currentAmount);
     }
 
     function claimRewards(uint256 _shares) public nonReentrant {
@@ -375,12 +395,28 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     function setBuyBackRate(uint256 _buyBackRate) public onlyOwner {
-        require(_buyBackRate <= buyBackRateUL, "SweetVault: BuyBackRate too high");
+        require(
+            _buyBackRate <= buyBackRateUL,
+            "SweetVault: Buy back rate too high"
+        );
 
         uint256 oldBuyBackRate = buyBackRate;
 
         buyBackRate = _buyBackRate;
 
         emit SetBuyBackRate(oldBuyBackRate, buyBackRate);
+    }
+
+    function setEarlyWithdrawFee(uint256 _earlyWithdrawFee) public onlyOwner {
+        require(
+            _earlyWithdrawFee <= earlyWithdrawFeeUL,
+            "SweetVault: Early withdraw fee too high"
+        );
+
+        uint256 oldEarlyWithdrawFee = earlyWithdrawFee;
+
+        earlyWithdrawFee = _earlyWithdrawFee;
+
+        emit SetBuyBackRate(oldEarlyWithdrawFee, earlyWithdrawFee);
     }
 }
