@@ -32,15 +32,13 @@ contract PacocaVault is Ownable {
     uint256 public constant MAX_WITHDRAW_FEE = 100; // 1%
     uint256 public constant MAX_WITHDRAW_FEE_PERIOD = 72 hours; // 3 days
 
-    uint256 public performanceFee = 200; // 2%
     uint256 public withdrawFee = 10; // 0.1%
     uint256 public withdrawFeePeriod = 72 hours; // 3 days
 
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
-    event Harvest(address indexed sender, uint256 performanceFee);
+    event Harvest(address indexed sender);
     event SetTreasury(address treasury);
-    event SetPerformanceFee(uint256 performanceFee);
     event SetWithdrawFee(uint256 withdrawFee);
     event SetWithdrawFeePeriod(uint256 withdrawFeePeriod);
 
@@ -115,18 +113,12 @@ contract PacocaVault is Ownable {
     /**
      * @notice Reinvests PACOCA tokens into MasterChef
      */
-    function harvest() external notContract {
-        PacocaFarm(masterchef).withdraw(0, 0);
-
-        uint256 bal = available();
-        uint256 currentPerformanceFee = bal.mul(performanceFee).div(10000);
-        token.safeTransfer(treasury, currentPerformanceFee);
+    function harvest() external {
+        masterchef.withdraw(0, 0);
 
         _earn();
 
-        lastHarvestedTime = block.timestamp;
-
-        emit Harvest(msg.sender, currentPerformanceFee);
+        emit Harvest(msg.sender);
     }
 
     /**
@@ -139,18 +131,6 @@ contract PacocaVault is Ownable {
         treasury = _treasury;
 
         emit SetTreasury(treasury);
-    }
-
-    /**
-     * @notice Sets performance fee
-     * @dev Only callable by the contract owner.
-     */
-    function setPerformanceFee(uint256 _performanceFee) external onlyOwner {
-        require(_performanceFee <= MAX_PERFORMANCE_FEE, "performanceFee cannot be more than MAX_PERFORMANCE_FEE");
-
-        performanceFee = _performanceFee;
-
-        emit SetPerformanceFee(performanceFee);
     }
 
     /**
