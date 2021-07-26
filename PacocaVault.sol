@@ -137,7 +137,7 @@ contract PacocaVault is Ownable, ReentrancyGuard {
      * @return Returns total pending Pacoca rewards
      */
     function calculateTotalPendingPacocaRewards() external view returns (uint256) {
-        uint256 amount = PacocaFarm(masterchef).pendingPACOCA(0, address(this));
+        uint256 amount = masterchef.pendingPACOCA(0, address(this));
         amount = amount.add(available());
 
         return amount;
@@ -173,7 +173,7 @@ contract PacocaVault is Ownable, ReentrancyGuard {
         uint256 bal = available();
         if (bal < currentAmount) {
             uint256 balWithdraw = currentAmount.sub(bal);
-            PacocaFarm(masterchef).withdraw(0, balWithdraw);
+            masterchef.withdraw(0, balWithdraw);
             uint256 balAfter = available();
             uint256 diff = balAfter.sub(bal);
             if (diff < balWithdraw) {
