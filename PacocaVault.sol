@@ -4,10 +4,11 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "./PacocaFarm.sol";
 
-contract PacocaVault is Ownable {
+contract PacocaVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -63,18 +64,10 @@ contract PacocaVault is Ownable {
     }
 
     /**
-     * @notice Checks if the msg.sender is a contract or a proxy
-     */
-    modifier notContract() {
-        require(msg.sender == tx.origin, "proxy contract not allowed");
-        _;
-    }
-
-    /**
      * @notice Deposits funds into the Pacoca Vault
      * @param _amount: number of tokens to deposit (in PACOCA)
      */
-    function deposit(uint256 _amount) external notContract {
+    function deposit(uint256 _amount) external nonReentrant {
         require(_amount > 0, "Nothing to deposit");
 
         uint256 pool = underlyingTokenBalance();
@@ -197,7 +190,7 @@ contract PacocaVault is Ownable {
      * @notice Withdraws from funds from the Pacoca Vault
      * @param _shares: Number of shares to withdraw
      */
-    function withdraw(uint256 _shares) public notContract {
+    function withdraw(uint256 _shares) public nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
 
         require(
@@ -274,17 +267,5 @@ contract PacocaVault is Ownable {
 
             masterchef.deposit(0, balance);
         }
-    }
-
-    /**
-     * @notice Checks if address is a contract
-     * @dev It prevents contract from being targetted
-     */
-    function _isContract(address addr) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(addr)
-        }
-        return size > 0;
     }
 }
