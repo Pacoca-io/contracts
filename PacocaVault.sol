@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import "./PacocaFarm.sol";
+import "./interfaces/IPacocaFarm.sol";
 
 contract PacocaVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -20,8 +20,7 @@ contract PacocaVault is Ownable, ReentrancyGuard {
     }
 
     IERC20 public immutable token; // Pacoca token
-
-    PacocaFarm public immutable masterchef;
+    IPacocaFarm public immutable masterchef;
 
     mapping(address => UserInfo) public userInfo;
 
@@ -49,7 +48,7 @@ contract PacocaVault is Ownable, ReentrancyGuard {
      */
     constructor(
         IERC20 _token,
-        PacocaFarm _masterchef,
+        IPacocaFarm _masterchef,
         address _owner,
         address _treasury
     ) public {
