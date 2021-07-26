@@ -199,8 +199,15 @@ contract PacocaVault is Ownable {
      */
     function withdraw(uint256 _shares) public notContract {
         UserInfo storage user = userInfo[msg.sender];
-        require(_shares > 0, "Nothing to withdraw");
-        require(_shares <= user.shares, "Withdraw amount exceeds balance");
+
+        require(
+            _shares > 0,
+            "PacocaVault: Nothing to withdraw"
+        );
+        require(
+            _shares <= user.shares,
+            "PacocaVault: Withdraw amount exceeds balance"
+        );
 
         uint256 currentAmount = (underlyingTokenBalance().mul(_shares)).div(totalShares);
         user.shares = user.shares.sub(_shares);
