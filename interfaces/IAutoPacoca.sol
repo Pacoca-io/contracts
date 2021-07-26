@@ -12,5 +12,10 @@ interface IAutoPacoca {
 
     function getPricePerFullShare() external view returns (uint256);
 
-    function sharesOf(address _user) external view returns (uint256);
+    function userInfo(address _user) external view returns (
+        uint256 shares,
+        uint256 lastDepositedTime,
+        uint256 pacocaAtLastUserAction,
+        uint256 lastUserActionTime
+    );
 }

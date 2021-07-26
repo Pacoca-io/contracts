@@ -143,7 +143,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
             balanceBeforeFees.mul(keeperFee).div(10000)
         );
 
-        uint256 previousShares = AUTO_PACOCA.sharesOf(address(this));
+        uint256 previousShares = totalAutoPacocaShares();
         uint256 pacocaBalance = _pacocaBalance();
 
         _approveTokenIfNeeded(
@@ -154,7 +154,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         AUTO_PACOCA.deposit(pacocaBalance);
 
-        uint256 currentShares = AUTO_PACOCA.sharesOf(address(this));
+        uint256 currentShares = totalAutoPacocaShares();
 
         accSharesPerStakedToken = accSharesPerStakedToken.add(
             currentShares.sub(previousShares).mul(1e18).div(totalStake())
@@ -317,6 +317,12 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
     function totalStake() public view returns (uint256) {
         return STAKED_TOKEN_FARM.userInfo(FARM_PID, address(this));
+    }
+
+    function totalAutoPacocaShares() public view returns (uint256) {
+        (uint256 shares, , ,) = AUTO_PACOCA.userInfo(address(this));
+
+        return shares;
     }
 
     // Safe PACOCA transfer function, just in case if rounding error causes pool to not have enough
