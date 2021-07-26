@@ -11,25 +11,17 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    struct UserInfo {
-        bool isSweetVault; // only sweet vault contracts are allowed to interact with some functions
-        uint256 shares; // number of shares for a user
-        uint256 lastDepositedTime; // keeps track of deposited time for potential penalty
-        uint256 pacocaAtLastUserAction; // keeps track of pacoca deposited at the last user action
-    }
-
     IERC20 public immutable token; // Pacoca token
 
     IPacocaFarm public immutable masterchef;
 
-    mapping(address => UserInfo) public userInfo;
+    mapping(address => uint256) public sharesOf;
 
     uint256 public totalShares;
 
-    event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
+    event Deposit(address indexed sender, uint256 amount, uint256 shares);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
     event Harvest(address indexed sender);
-    event SweetVaultAdded(address vault);
 
     /**
      * @notice Constructor
@@ -49,17 +41,6 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Checks if the msg.sender is a SweetVault contract
-     */
-    modifier onlySweetVault() {
-        require(
-            userInfo[msg.sender].isSweetVault,
-            "AutoPacoca: only sweet vaults are allowed"
-        );
-        _;
-    }
-
-    /**
      * @notice Reinvests PACOCA tokens into MasterChef
      */
     function harvest() external {
@@ -74,42 +55,40 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @notice Deposits funds into the Pacoca Vault
      * @param _amount: number of tokens to deposit (in PACOCA)
      */
-    function deposit(uint256 _amount) external onlySweetVault nonReentrant {
+    function deposit(uint256 _amount) external nonReentrant {
         require(_amount > 0, "Nothing to deposit");
 
         uint256 pool = underlyingTokenBalance();
         token.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 currentShares = 0;
+
         if (totalShares != 0) {
             currentShares = (_amount.mul(totalShares)).div(pool);
         } else {
             currentShares = _amount;
         }
-        UserInfo storage user = userInfo[msg.sender];
 
-        user.shares = user.shares.add(currentShares);
-        user.lastDepositedTime = block.timestamp;
+        sharesOf[msg.sender] = sharesOf[msg.sender].add(currentShares);
 
         totalShares = totalShares.add(currentShares);
 
-        user.pacocaAtLastUserAction = user.shares.mul(underlyingTokenBalance()).div(totalShares);
-
         _earn();
 
-        emit Deposit(msg.sender, _amount, currentShares, block.timestamp);
+        emit Deposit(msg.sender, _amount, currentShares);
     }
 
     /**
      * @notice Withdraws from funds from the Pacoca Vault
      * @param _shares: Number of shares to withdraw
      */
-    function withdraw(uint256 _shares) public onlySweetVault nonReentrant {
-        UserInfo storage user = userInfo[msg.sender];
+    function withdraw(uint256 _shares) public nonReentrant {
+        uint256 userShares = sharesOf[msg.sender];
+
         require(_shares > 0, "AutoPacoca: Nothing to withdraw");
-        require(_shares <= user.shares, "AutoPacoca: Withdraw amount exceeds balance");
+        require(_shares <= userShares, "AutoPacoca: Withdraw amount exceeds balance");
 
         uint256 currentAmount = (underlyingTokenBalance().mul(_shares)).div(totalShares);
-        user.shares = user.shares.sub(_shares);
+        sharesOf[msg.sender] = userShares.sub(_shares);
         totalShares = totalShares.sub(_shares);
 
         uint256 bal = available();
@@ -123,12 +102,6 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
             }
         }
 
-        if (user.shares > 0) {
-            user.pacocaAtLastUserAction = user.shares.mul(underlyingTokenBalance()).div(totalShares);
-        } else {
-            user.pacocaAtLastUserAction = 0;
-        }
-
         token.safeTransfer(msg.sender, currentAmount);
 
         emit Withdraw(msg.sender, currentAmount, _shares);
@@ -138,7 +111,7 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
      * @notice Withdraws all funds for a user
      */
     function withdrawAll() external {
-        withdraw(userInfo[msg.sender].shares);
+        withdraw(sharesOf[msg.sender]);
     }
 
     /**
@@ -175,16 +148,6 @@ contract AutoPacoca is Ownable, ReentrancyGuard {
         (uint256 amount,) = masterchef.userInfo(0, address(this));
 
         return token.balanceOf(address(this)).add(amount);
-    }
-
-    function sharesOf(address _user) external view returns (uint256) {
-        return userInfo[_user].shares;
-    }
-
-    function addSweetVault(address _vault) external onlyOwner {
-        userInfo[_vault].isSweetVault = true;
-
-        emit SweetVaultAdded(_vault);
     }
 
     /**
