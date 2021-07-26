@@ -77,7 +77,7 @@ contract PacocaVault is Ownable {
     function deposit(uint256 _amount) external notContract {
         require(_amount > 0, "Nothing to deposit");
 
-        uint256 pool = balanceOf();
+        uint256 pool = underlyingTokenBalance();
         token.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 currentShares = 0;
         if (totalShares != 0) {
@@ -92,7 +92,7 @@ contract PacocaVault is Ownable {
 
         totalShares = totalShares.add(currentShares);
 
-        user.pacocaAtLastUserAction = user.shares.mul(balanceOf()).div(totalShares);
+        user.pacocaAtLastUserAction = user.shares.mul(underlyingTokenBalance()).div(totalShares);
         user.lastUserActionTime = block.timestamp;
 
         _earn();
@@ -190,7 +190,7 @@ contract PacocaVault is Ownable {
      * @notice Calculates the price per share
      */
     function getPricePerFullShare() external view returns (uint256) {
-        return totalShares == 0 ? 1e18 : balanceOf().mul(1e18).div(totalShares);
+        return totalShares == 0 ? 1e18 : underlyingTokenBalance().mul(1e18).div(totalShares);
     }
 
     /**
@@ -202,7 +202,7 @@ contract PacocaVault is Ownable {
         require(_shares > 0, "Nothing to withdraw");
         require(_shares <= user.shares, "Withdraw amount exceeds balance");
 
-        uint256 currentAmount = (balanceOf().mul(_shares)).div(totalShares);
+        uint256 currentAmount = (underlyingTokenBalance().mul(_shares)).div(totalShares);
         user.shares = user.shares.sub(_shares);
         totalShares = totalShares.sub(_shares);
 
@@ -224,7 +224,7 @@ contract PacocaVault is Ownable {
         }
 
         if (user.shares > 0) {
-            user.pacocaAtLastUserAction = user.shares.mul(balanceOf()).div(totalShares);
+            user.pacocaAtLastUserAction = user.shares.mul(underlyingTokenBalance()).div(totalShares);
         } else {
             user.pacocaAtLastUserAction = 0;
         }
@@ -248,8 +248,9 @@ contract PacocaVault is Ownable {
      * @notice Calculates the total underlying tokens
      * @dev It includes tokens held by the contract and held in MasterChef
      */
-    function balanceOf() public view returns (uint256) {
-        (uint256 amount, ) = PacocaFarm(masterchef).userInfo(0, address(this));
+    function underlyingTokenBalance() public view returns (uint256) {
+        (uint256 amount,) = masterchef.userInfo(0, address(this));
+
         return token.balanceOf(address(this)).add(amount);
     }
 
