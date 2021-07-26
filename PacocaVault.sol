@@ -4,11 +4,10 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "./PacocaFarm.sol";
 
-contract PacocaVault is Ownable, Pausable {
+contract PacocaVault is Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -40,8 +39,6 @@ contract PacocaVault is Ownable, Pausable {
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
     event Harvest(address indexed sender, uint256 performanceFee);
-    event Pause();
-    event Unpause();
     event SetTreasury(address treasury);
     event SetPerformanceFee(uint256 performanceFee);
     event SetWithdrawFee(uint256 withdrawFee);
@@ -80,10 +77,9 @@ contract PacocaVault is Ownable, Pausable {
 
     /**
      * @notice Deposits funds into the Pacoca Vault
-     * @dev Only possible when contract not paused.
      * @param _amount: number of tokens to deposit (in PACOCA)
      */
-    function deposit(uint256 _amount) external whenNotPaused notContract {
+    function deposit(uint256 _amount) external notContract {
         require(_amount > 0, "Nothing to deposit");
 
         uint256 pool = balanceOf();
@@ -118,9 +114,8 @@ contract PacocaVault is Ownable, Pausable {
 
     /**
      * @notice Reinvests PACOCA tokens into MasterChef
-     * @dev Only possible when contract not paused.
      */
-    function harvest() external notContract whenNotPaused {
+    function harvest() external notContract {
         PacocaFarm(masterchef).withdraw(0, 0);
 
         uint256 bal = available();
@@ -201,24 +196,6 @@ contract PacocaVault is Ownable, Pausable {
 
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(msg.sender, amount);
-    }
-
-    /**
-     * @notice Triggers stopped state
-     * @dev Only possible when contract not paused.
-     */
-    function pause() external onlyOwner whenNotPaused {
-        _pause();
-        emit Pause();
-    }
-
-    /**
-     * @notice Returns to normal state
-     * @dev Only possible when contract is paused.
-     */
-    function unpause() external onlyOwner whenPaused {
-        _unpause();
-        emit Unpause();
     }
 
     /**
