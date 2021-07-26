@@ -29,9 +29,7 @@ contract PacocaVault is Ownable, ReentrancyGuard {
     uint256 public lastHarvestedTime;
     address public treasury;
 
-    uint256 public constant MAX_PERFORMANCE_FEE = 500; // 5%
     uint256 public constant MAX_WITHDRAW_FEE = 100; // 1%
-    uint256 public constant MAX_WITHDRAW_FEE_PERIOD = 72 hours; // 3 days
 
     uint256 public withdrawFee = 10; // 0.1%
     uint256 public withdrawFeePeriod = 72 hours; // 3 days
@@ -41,7 +39,6 @@ contract PacocaVault is Ownable, ReentrancyGuard {
     event Harvest(address indexed sender);
     event SetTreasury(address treasury);
     event SetWithdrawFee(uint256 withdrawFee);
-    event SetWithdrawFeePeriod(uint256 withdrawFeePeriod);
 
     /**
      * @notice Constructor
@@ -133,39 +130,6 @@ contract PacocaVault is Ownable, ReentrancyGuard {
         withdrawFee = _withdrawFee;
 
         emit SetWithdrawFee(withdrawFee);
-    }
-
-    /**
-     * @notice Sets withdraw fee period
-     * @dev Only callable by the contract owner.
-     */
-    function setWithdrawFeePeriod(uint256 _withdrawFeePeriod) external onlyOwner {
-        require(
-            _withdrawFeePeriod <= MAX_WITHDRAW_FEE_PERIOD,
-            "withdrawFeePeriod cannot be more than MAX_WITHDRAW_FEE_PERIOD"
-        );
-
-        withdrawFeePeriod = _withdrawFeePeriod;
-
-        emit SetWithdrawFeePeriod(withdrawFeePeriod);
-    }
-
-    /**
-     * @notice Withdraws from MasterChef to Vault without caring about rewards.
-     * @dev EMERGENCY ONLY. Only callable by the contract owner.
-     */
-    function emergencyWithdraw() external onlyOwner {
-        PacocaFarm(masterchef).emergencyWithdraw(0);
-    }
-
-    /**
-     * @notice Withdraw unexpected tokens sent to the Pacoca Vault
-     */
-    function inCaseTokensGetStuck(address _token) external onlyOwner {
-        require(_token != address(token), "Token cannot be same as deposit token");
-
-        uint256 amount = IERC20(_token).balanceOf(address(this));
-        IERC20(_token).safeTransfer(msg.sender, amount);
     }
 
     /**
