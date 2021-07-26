@@ -4,11 +4,11 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import "./PacocaFarm.sol";
+import "./interfaces/IPacocaFarm.sol";
 
-contract PacocaVault is Ownable, Pausable {
+contract PacocaVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -20,8 +20,7 @@ contract PacocaVault is Ownable, Pausable {
     }
 
     IERC20 public immutable token; // Pacoca token
-
-    PacocaFarm public immutable masterchef;
+    IPacocaFarm public immutable masterchef;
 
     mapping(address => UserInfo) public userInfo;
 
@@ -29,23 +28,16 @@ contract PacocaVault is Ownable, Pausable {
     uint256 public lastHarvestedTime;
     address public treasury;
 
-    uint256 public constant MAX_PERFORMANCE_FEE = 500; // 5%
-    uint256 public constant MAX_WITHDRAW_FEE = 100; // 1%
-    uint256 public constant MAX_WITHDRAW_FEE_PERIOD = 72 hours; // 3 days
-
-    uint256 public performanceFee = 200; // 2%
     uint256 public withdrawFee = 10; // 0.1%
     uint256 public withdrawFeePeriod = 72 hours; // 3 days
+    uint256 public constant MAX_WITHDRAW_FEE = 100; // 1%
+
 
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
-    event Harvest(address indexed sender, uint256 performanceFee);
-    event Pause();
-    event Unpause();
+    event Harvest(address indexed sender);
     event SetTreasury(address treasury);
-    event SetPerformanceFee(uint256 performanceFee);
     event SetWithdrawFee(uint256 withdrawFee);
-    event SetWithdrawFeePeriod(uint256 withdrawFeePeriod);
 
     /**
      * @notice Constructor
@@ -56,7 +48,7 @@ contract PacocaVault is Ownable, Pausable {
      */
     constructor(
         IERC20 _token,
-        PacocaFarm _masterchef,
+        IPacocaFarm _masterchef,
         address _owner,
         address _treasury
     ) public {
@@ -65,28 +57,16 @@ contract PacocaVault is Ownable, Pausable {
         treasury = _treasury;
 
         transferOwnership(_owner);
-
-        // Infinite approve
-        IERC20(_token).safeApprove(address(_masterchef), uint256(-1));
-    }
-
-    /**
-     * @notice Checks if the msg.sender is a contract or a proxy
-     */
-    modifier notContract() {
-        require(msg.sender == tx.origin, "proxy contract not allowed");
-        _;
     }
 
     /**
      * @notice Deposits funds into the Pacoca Vault
-     * @dev Only possible when contract not paused.
      * @param _amount: number of tokens to deposit (in PACOCA)
      */
-    function deposit(uint256 _amount) external whenNotPaused notContract {
-        require(_amount > 0, "Nothing to deposit");
+    function deposit(uint256 _amount) external nonReentrant {
+        require(_amount > 0, "PacocaVault: Nothing to deposit");
 
-        uint256 pool = balanceOf();
+        uint256 pool = underlyingTokenBalance();
         token.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 currentShares = 0;
         if (totalShares != 0) {
@@ -101,7 +81,7 @@ contract PacocaVault is Ownable, Pausable {
 
         totalShares = totalShares.add(currentShares);
 
-        user.pacocaAtLastUserAction = user.shares.mul(balanceOf()).div(totalShares);
+        user.pacocaAtLastUserAction = user.shares.mul(underlyingTokenBalance()).div(totalShares);
         user.lastUserActionTime = block.timestamp;
 
         _earn();
@@ -118,20 +98,13 @@ contract PacocaVault is Ownable, Pausable {
 
     /**
      * @notice Reinvests PACOCA tokens into MasterChef
-     * @dev Only possible when contract not paused.
      */
-    function harvest() external notContract whenNotPaused {
-        PacocaFarm(masterchef).withdraw(0, 0);
-
-        uint256 bal = available();
-        uint256 currentPerformanceFee = bal.mul(performanceFee).div(10000);
-        token.safeTransfer(treasury, currentPerformanceFee);
+    function harvest() external {
+        masterchef.withdraw(0, 0);
 
         _earn();
 
-        lastHarvestedTime = block.timestamp;
-
-        emit Harvest(msg.sender, currentPerformanceFee);
+        emit Harvest(msg.sender);
     }
 
     /**
@@ -139,7 +112,7 @@ contract PacocaVault is Ownable, Pausable {
      * @dev Only callable by the contract owner.
      */
     function setTreasury(address _treasury) external onlyOwner {
-        require(_treasury != address(0), "Cannot be zero address");
+        require(_treasury != address(0), "PacocaVault: Cannot be zero address");
 
         treasury = _treasury;
 
@@ -147,23 +120,14 @@ contract PacocaVault is Ownable, Pausable {
     }
 
     /**
-     * @notice Sets performance fee
-     * @dev Only callable by the contract owner.
-     */
-    function setPerformanceFee(uint256 _performanceFee) external onlyOwner {
-        require(_performanceFee <= MAX_PERFORMANCE_FEE, "performanceFee cannot be more than MAX_PERFORMANCE_FEE");
-
-        performanceFee = _performanceFee;
-
-        emit SetPerformanceFee(performanceFee);
-    }
-
-    /**
      * @notice Sets withdraw fee
      * @dev Only callable by the contract owner.
      */
     function setWithdrawFee(uint256 _withdrawFee) external onlyOwner {
-        require(_withdrawFee <= MAX_WITHDRAW_FEE, "withdrawFee cannot be more than MAX_WITHDRAW_FEE");
+        require(
+            _withdrawFee <= MAX_WITHDRAW_FEE,
+            "PacocaVault: withdrawFee cannot be more than MAX_WITHDRAW_FEE"
+        );
 
         withdrawFee = _withdrawFee;
 
@@ -171,62 +135,11 @@ contract PacocaVault is Ownable, Pausable {
     }
 
     /**
-     * @notice Sets withdraw fee period
-     * @dev Only callable by the contract owner.
-     */
-    function setWithdrawFeePeriod(uint256 _withdrawFeePeriod) external onlyOwner {
-        require(
-            _withdrawFeePeriod <= MAX_WITHDRAW_FEE_PERIOD,
-            "withdrawFeePeriod cannot be more than MAX_WITHDRAW_FEE_PERIOD"
-        );
-
-        withdrawFeePeriod = _withdrawFeePeriod;
-
-        emit SetWithdrawFeePeriod(withdrawFeePeriod);
-    }
-
-    /**
-     * @notice Withdraws from MasterChef to Vault without caring about rewards.
-     * @dev EMERGENCY ONLY. Only callable by the contract owner.
-     */
-    function emergencyWithdraw() external onlyOwner {
-        PacocaFarm(masterchef).emergencyWithdraw(0);
-    }
-
-    /**
-     * @notice Withdraw unexpected tokens sent to the Pacoca Vault
-     */
-    function inCaseTokensGetStuck(address _token) external onlyOwner {
-        require(_token != address(token), "Token cannot be same as deposit token");
-
-        uint256 amount = IERC20(_token).balanceOf(address(this));
-        IERC20(_token).safeTransfer(msg.sender, amount);
-    }
-
-    /**
-     * @notice Triggers stopped state
-     * @dev Only possible when contract not paused.
-     */
-    function pause() external onlyOwner whenNotPaused {
-        _pause();
-        emit Pause();
-    }
-
-    /**
-     * @notice Returns to normal state
-     * @dev Only possible when contract is paused.
-     */
-    function unpause() external onlyOwner whenPaused {
-        _unpause();
-        emit Unpause();
-    }
-
-    /**
      * @notice Calculates the total pending rewards that can be restaked
      * @return Returns total pending Pacoca rewards
      */
     function calculateTotalPendingPacocaRewards() external view returns (uint256) {
-        uint256 amount = PacocaFarm(masterchef).pendingPACOCA(0, address(this));
+        uint256 amount = masterchef.pendingPACOCA(0, address(this));
         amount = amount.add(available());
 
         return amount;
@@ -236,26 +149,33 @@ contract PacocaVault is Ownable, Pausable {
      * @notice Calculates the price per share
      */
     function getPricePerFullShare() external view returns (uint256) {
-        return totalShares == 0 ? 1e18 : balanceOf().mul(1e18).div(totalShares);
+        return totalShares == 0 ? 1e18 : underlyingTokenBalance().mul(1e18).div(totalShares);
     }
 
     /**
      * @notice Withdraws from funds from the Pacoca Vault
      * @param _shares: Number of shares to withdraw
      */
-    function withdraw(uint256 _shares) public notContract {
+    function withdraw(uint256 _shares) public nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
-        require(_shares > 0, "Nothing to withdraw");
-        require(_shares <= user.shares, "Withdraw amount exceeds balance");
 
-        uint256 currentAmount = (balanceOf().mul(_shares)).div(totalShares);
+        require(
+            _shares > 0,
+            "PacocaVault: Nothing to withdraw"
+        );
+        require(
+            _shares <= user.shares,
+            "PacocaVault: Withdraw amount exceeds balance"
+        );
+
+        uint256 currentAmount = (underlyingTokenBalance().mul(_shares)).div(totalShares);
         user.shares = user.shares.sub(_shares);
         totalShares = totalShares.sub(_shares);
 
         uint256 bal = available();
         if (bal < currentAmount) {
             uint256 balWithdraw = currentAmount.sub(bal);
-            PacocaFarm(masterchef).withdraw(0, balWithdraw);
+            masterchef.withdraw(0, balWithdraw);
             uint256 balAfter = available();
             uint256 diff = balAfter.sub(bal);
             if (diff < balWithdraw) {
@@ -270,7 +190,7 @@ contract PacocaVault is Ownable, Pausable {
         }
 
         if (user.shares > 0) {
-            user.pacocaAtLastUserAction = user.shares.mul(balanceOf()).div(totalShares);
+            user.pacocaAtLastUserAction = user.shares.mul(underlyingTokenBalance()).div(totalShares);
         } else {
             user.pacocaAtLastUserAction = 0;
         }
@@ -294,8 +214,9 @@ contract PacocaVault is Ownable, Pausable {
      * @notice Calculates the total underlying tokens
      * @dev It includes tokens held by the contract and held in MasterChef
      */
-    function balanceOf() public view returns (uint256) {
-        (uint256 amount, ) = PacocaFarm(masterchef).userInfo(0, address(this));
+    function underlyingTokenBalance() public view returns (uint256) {
+        (uint256 amount,) = masterchef.userInfo(0, address(this));
+
         return token.balanceOf(address(this)).add(amount);
     }
 
@@ -303,21 +224,14 @@ contract PacocaVault is Ownable, Pausable {
      * @notice Deposits tokens into MasterChef to earn staking rewards
      */
     function _earn() internal {
-        uint256 bal = available();
-        if (bal > 0) {
-            PacocaFarm(masterchef).deposit(0, bal);
-        }
-    }
+        uint256 balance = available();
 
-    /**
-     * @notice Checks if address is a contract
-     * @dev It prevents contract from being targetted
-     */
-    function _isContract(address addr) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(addr)
+        if (balance > 0) {
+            if (token.allowance(address(this), address(masterchef)) < balance) {
+                token.safeApprove(address(masterchef), uint(- 1));
+            }
+
+            masterchef.deposit(0, balance);
         }
-        return size > 0;
     }
 }
