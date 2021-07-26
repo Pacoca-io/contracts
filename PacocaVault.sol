@@ -29,10 +29,10 @@ contract PacocaVault is Ownable, ReentrancyGuard {
     uint256 public lastHarvestedTime;
     address public treasury;
 
-    uint256 public constant MAX_WITHDRAW_FEE = 100; // 1%
-
     uint256 public withdrawFee = 10; // 0.1%
     uint256 public withdrawFeePeriod = 72 hours; // 3 days
+    uint256 public constant MAX_WITHDRAW_FEE = 100; // 1%
+
 
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
@@ -65,7 +65,7 @@ contract PacocaVault is Ownable, ReentrancyGuard {
      * @param _amount: number of tokens to deposit (in PACOCA)
      */
     function deposit(uint256 _amount) external nonReentrant {
-        require(_amount > 0, "Nothing to deposit");
+        require(_amount > 0, "PacocaVault: Nothing to deposit");
 
         uint256 pool = underlyingTokenBalance();
         token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -113,7 +113,7 @@ contract PacocaVault is Ownable, ReentrancyGuard {
      * @dev Only callable by the contract owner.
      */
     function setTreasury(address _treasury) external onlyOwner {
-        require(_treasury != address(0), "Cannot be zero address");
+        require(_treasury != address(0), "PacocaVault: Cannot be zero address");
 
         treasury = _treasury;
 
@@ -125,7 +125,10 @@ contract PacocaVault is Ownable, ReentrancyGuard {
      * @dev Only callable by the contract owner.
      */
     function setWithdrawFee(uint256 _withdrawFee) external onlyOwner {
-        require(_withdrawFee <= MAX_WITHDRAW_FEE, "withdrawFee cannot be more than MAX_WITHDRAW_FEE");
+        require(
+            _withdrawFee <= MAX_WITHDRAW_FEE,
+            "PacocaVault: withdrawFee cannot be more than MAX_WITHDRAW_FEE"
+        );
 
         withdrawFee = _withdrawFee;
 
