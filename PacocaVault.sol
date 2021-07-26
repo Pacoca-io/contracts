@@ -60,9 +60,6 @@ contract PacocaVault is Ownable {
         treasury = _treasury;
 
         transferOwnership(_owner);
-
-        // Infinite approve
-        IERC20(_token).safeApprove(address(_masterchef), uint256(-1));
     }
 
     /**
@@ -260,9 +257,14 @@ contract PacocaVault is Ownable {
      * @notice Deposits tokens into MasterChef to earn staking rewards
      */
     function _earn() internal {
-        uint256 bal = available();
-        if (bal > 0) {
-            PacocaFarm(masterchef).deposit(0, bal);
+        uint256 balance = available();
+
+        if (balance > 0) {
+            if (token.allowance(address(this), address(masterchef)) < balance) {
+                token.safeApprove(address(masterchef), uint(- 1));
+            }
+
+            masterchef.deposit(0, balance);
         }
     }
 
