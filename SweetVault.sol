@@ -21,7 +21,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/IPancakeswapFarm.sol";
 import "./interfaces/IPancakeRouter01.sol";
-import "./interfaces/IAutoPacoca.sol";
+import "./interfaces/IPacocaVault.sol";
 
 contract SweetVault is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
@@ -42,7 +42,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     address constant public BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     address constant public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     IERC20 constant public PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
-    IAutoPacoca immutable public AUTO_PACOCA;
+    IPacocaVault immutable public AUTO_PACOCA;
     IERC20 immutable public STAKED_TOKEN;
 
     // Runtime data
@@ -95,7 +95,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         address _treasury,
         address _keeper
     ) public {
-        AUTO_PACOCA = IAutoPacoca(_autoPacoca);
+        AUTO_PACOCA = IPacocaVault(_autoPacoca);
         STAKED_TOKEN = IERC20(_stakedToken);
         STAKED_TOKEN_FARM = IPancakeswapFarm(_stakedTokenFarm);
         FARM_REWARD_TOKEN = IERC20(_farmRewardToken);

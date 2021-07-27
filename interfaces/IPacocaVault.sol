@@ -2,8 +2,8 @@
 
 pragma solidity 0.6.12;
 
-interface IAutoPacoca {
-    event Deposit(address indexed sender, uint256 amount, uint256 shares);
+interface IPacocaVault {
+    event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
 
     function deposit(uint256 _amount) external;
