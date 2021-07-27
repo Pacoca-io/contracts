@@ -28,10 +28,9 @@ contract PacocaVault is Ownable, ReentrancyGuard {
     uint256 public lastHarvestedTime;
     address public treasury;
 
-    uint256 public withdrawFee = 10; // 0.1%
+    uint256 public withdrawFee;
     uint256 public withdrawFeePeriod = 72 hours; // 3 days
-    uint256 public constant MAX_WITHDRAW_FEE = 100; // 1%
-
+    uint256 public constant MAX_WITHDRAW_FEE = 200; // 2%
 
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
     event Withdraw(address indexed sender, uint256 amount, uint256 shares);
@@ -50,11 +49,13 @@ contract PacocaVault is Ownable, ReentrancyGuard {
         IERC20 _token,
         IPacocaFarm _masterchef,
         address _owner,
-        address _treasury
+        address _treasury,
+        uint256 _withdrawFee
     ) public {
         token = _token;
         masterchef = _masterchef;
         treasury = _treasury;
+        withdrawFee = _withdrawFee;
 
         transferOwnership(_owner);
     }
