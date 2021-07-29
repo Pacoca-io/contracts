@@ -307,7 +307,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         address _spender
     ) private {
         if (_token.allowance(address(this), _spender) < _amount) {
-            _token.safeApprove(_spender, uint(- 1));
+            _token.safeIncreaseAllowance(_spender, _amount);
         }
     }
 
