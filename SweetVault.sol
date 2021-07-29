@@ -263,14 +263,15 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         user.autoPacocaShares = user.autoPacocaShares.sub(_shares);
 
-        uint256 pricePerShare = AUTO_PACOCA.getPricePerFullShare();
-        uint256 pacocaAmount = _shares.mul(pricePerShare).div(1e18);
+        uint256 pacocaBalanceBefore = _pacocaBalance();
 
         AUTO_PACOCA.withdraw(_shares);
 
-        _safePACOCATransfer(msg.sender, pacocaAmount);
+        uint256 withdrawAmount = _pacocaBalance().sub(pacocaBalanceBefore);
 
-        emit ClaimRewards(msg.sender, _shares, pacocaAmount);
+        _safePACOCATransfer(msg.sender, withdrawAmount);
+
+        emit ClaimRewards(msg.sender, _shares, withdrawAmount);
     }
 
     function getExpectedPacocaOutput() external view returns (uint256) {
