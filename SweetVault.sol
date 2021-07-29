@@ -94,6 +94,11 @@ contract SweetVault is Ownable, ReentrancyGuard {
         address _treasury,
         address _keeper
     ) public {
+        require(
+            _path[0] == address(_farmRewardToken) && _path[_path.length - 1] == address(PACOCA),
+            "SweetVault: Incorrect path"
+        );
+
         AUTO_PACOCA = IPacocaVault(_autoPacoca);
         STAKED_TOKEN = IERC20(_stakedToken);
         STAKED_TOKEN_FARM = IPancakeswapFarm(_stakedTokenFarm);
@@ -354,6 +359,11 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     function setPath(address[] memory _path) public onlyOwner {
+        require(
+            _path[0] == address(FARM_REWARD_TOKEN) && _path[_path.length - 1] == address(PACOCA),
+            "SweetVault: Incorrect path"
+        );
+
         address[] memory oldPath = path;
 
         path = _path;
