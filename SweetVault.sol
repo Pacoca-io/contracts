@@ -56,7 +56,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     bool immutable IS_CAKE_STAKING;
 
     // Settings
-    IPancakeRouter01 public router;
+    IPancakeRouter01 immutable public router;
     address[] public path; // Path from staked token to PACOCA
     address public treasury;
     address public keeper;
@@ -74,7 +74,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
     event ClaimRewards(address indexed user, uint256 shares, uint256 amount);
 
     // Setting updates
-    event SetRouter(address oldRouter, address newRouter);
     event SetPath(address[] oldPath, address[] newPath);
     event SetBuyBackRate(uint256 oldBuyBackRate, uint256 newBuyBackRate);
     event SetTreasury(address oldTreasury, address newTreasury);
@@ -352,14 +351,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
             address(this), // to
             block.timestamp // deadline
         );
-    }
-
-    function setRouter(address _router) public onlyOwner {
-        address oldRouter = address(router);
-
-        router = IPancakeRouter01(_router);
-
-        emit SetRouter(oldRouter, _router);
     }
 
     function setPath(address[] memory _path) public onlyOwner {
