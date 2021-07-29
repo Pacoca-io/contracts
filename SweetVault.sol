@@ -242,7 +242,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit Withdraw(msg.sender, currentAmount);
     }
 
-    function claimRewards(uint256 _shares) public nonReentrant {
+    function claimRewards(uint256 _shares) external nonReentrant {
         _claimRewards(_shares, true);
     }
 
@@ -359,7 +359,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         );
     }
 
-    function setPath(address[] memory _path) public onlyOwner {
+    function setPath(address[] memory _path) external onlyOwner {
         require(
             _path[0] == address(FARM_REWARD_TOKEN) && _path[_path.length - 1] == address(PACOCA),
             "SweetVault: Incorrect path"
@@ -372,7 +372,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit SetPath(oldPath, path);
     }
 
-    function setTreasury(address _treasury) public onlyOwner {
+    function setTreasury(address _treasury) external onlyOwner {
         address oldTreasury = treasury;
 
         treasury = _treasury;
@@ -380,7 +380,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit SetTreasury(oldTreasury, treasury);
     }
 
-    function setKeeper(address _keeper) public onlyOwner {
+    function setKeeper(address _keeper) external onlyOwner {
         address oldKeeper = keeper;
 
         keeper = _keeper;
@@ -388,7 +388,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit SetKeeper(oldKeeper, keeper);
     }
 
-    function setKeeperFee(uint256 _keeperFee) public onlyOwner {
+    function setKeeperFee(uint256 _keeperFee) external onlyOwner {
         require(_keeperFee <= keeperFeeUL, "SweetVault: Keeper fee too high");
 
         uint256 oldKeeperFee = keeperFee;
@@ -398,7 +398,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit SetBuyBackRate(oldKeeperFee, keeperFee);
     }
 
-    function setBuyBackRate(uint256 _buyBackRate) public onlyOwner {
+    function setBuyBackRate(uint256 _buyBackRate) external onlyOwner {
         require(
             _buyBackRate <= buyBackRateUL,
             "SweetVault: Buy back rate too high"
@@ -411,7 +411,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit SetBuyBackRate(oldBuyBackRate, buyBackRate);
     }
 
-    function setEarlyWithdrawFee(uint256 _earlyWithdrawFee) public onlyOwner {
+    function setEarlyWithdrawFee(uint256 _earlyWithdrawFee) external onlyOwner {
         require(
             _earlyWithdrawFee <= earlyWithdrawFeeUL,
             "SweetVault: Early withdraw fee too high"
