@@ -9,6 +9,12 @@
 | Pacoca Token | [0x55671114d774ee99D653D6C12460c780a67f1D18](https://bscscan.com/address/0x55671114d774ee99D653D6C12460c780a67f1D18) |
 | Pacoca Farm | [0x55410D946DFab292196462ca9BE9f3E4E4F337Dd](https://bscscan.com/address/0x55410D946DFab292196462ca9BE9f3E4E4F337Dd) |
 
+### Sweet Vaults
+
+| Asset | Address |
+|------|--------------|
+| CAKE | [0xD0CEbAaBb995e59F0A77401698044910c61A9fF5](https://bscscan.com/address/0xD0CEbAaBb995e59F0A77401698044910c61A9fF5) |
+
 ### Strategies (vaults)
 
 | Name | Address |
