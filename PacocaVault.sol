@@ -184,7 +184,10 @@ contract PacocaVault is Ownable, ReentrancyGuard {
             }
         }
 
-        if (block.timestamp < user.lastDepositedTime.add(withdrawFeePeriod)) {
+        if (
+            withdrawFee > 0 &&
+            block.timestamp < user.lastDepositedTime.add(withdrawFeePeriod)
+        ) {
             uint256 currentWithdrawFee = currentAmount.mul(withdrawFee).div(10000);
             token.safeTransfer(treasury, currentWithdrawFee);
             currentAmount = currentAmount.sub(currentWithdrawFee);
