@@ -14,8 +14,13 @@
 | Asset | Address |
 |------|--------------|
 | CAKE | [0xD0CEbAaBb995e59F0A77401698044910c61A9fF5](https://bscscan.com/address/0xD0CEbAaBb995e59F0A77401698044910c61A9fF5) |
+| BTCB-BUSD | [0xD0CEdB3BDb46669cb2ee447826665F0a4A92cb77](https://bscscan.com/address/0xD0CEdB3BDb46669cb2ee447826665F0a4A92cb77) |
+| BTCB-WBNB | [0xD0CEa4AdBc9C8652A71b72aB822E0C56E1FD5D33](https://bscscan.com/address/0xD0CEa4AdBc9C8652A71b72aB822E0C56E1FD5D33) |
+| CAKE-WBNB | [0xD0CEa5f8C97858738415aAfa9CA8dA1d03BAE587](https://bscscan.com/address/0xD0CEa5f8C97858738415aAfa9CA8dA1d03BAE587) |
+| BUSD-USDC | [0xD0CEc52ea1a1679910C35110D529a6c5d08fE116](https://bscscan.com/address/0xD0CEc52ea1a1679910C35110D529a6c5d08fE116) |
+| BUSD-WBNB | [0xD0CEab5a358072bf7B89B0Ab5548b1a9C70E4Ecd](https://bscscan.com/address/0xD0CEab5a358072bf7B89B0Ab5548b1a9C70E4Ecd) |
 
-### Strategies (vaults)
+### Strategies (legacy vaults)
 
 | Name | Address |
 |------|--------------|
@@ -46,7 +51,9 @@
 
 | Name | Address |
 |------|--------------|
-| BnbSwap | [0x1b3370be88e3922e7a7558ce858fecfb65fae7ee](https://bscscan.com/address/0x1b3370be88e3922e7a7558ce858fecfb65fae7ee) |
+| Broom | [0xD0CEc128176aC68ca893ae1347f6CB4923639bB9](https://bscscan.com/address/0xD0CEc128176aC68ca893ae1347f6CB4923639bB9) |
+| Auto Pacoca | [0x16205528a8f7510f4421009a7654835b541bb1b9](https://bscscan.com/address/0x16205528a8f7510f4421009a7654835b541bb1b9) |
+| VotingPower | [0xD0CEafa5C8CB601fD0528E344a0F769e6De7C171](https://bscscan.com/address/0xD0CEafa5C8CB601fD0528E344a0F769e6De7C171) |
 
 ## Treasury wallets
 
