@@ -39,7 +39,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     // Addresses
-    address constant public BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     address constant public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     IERC20 constant public PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
     IPacocaVault immutable public AUTO_PACOCA;
@@ -57,13 +56,22 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
     // Settings
     IPancakeRouter01 immutable public router;
-    address[] public path; // Path from staked token to PACOCA
+    address[] public pathToPacoca; // Path from staked token to PACOCA
+    address[] public pathToWbnb; // Path from staked token to WBNB
+
     address public treasury;
     address public keeper;
     uint256 public keeperFee = 50; // 0.5%
     uint256 public constant keeperFeeUL = 100; // 1%
-    uint256 public buyBackRate = 300; // 3%
-    uint256 public constant buyBackRateUL = 800; // 8%
+
+    address public platform;
+    uint256 public platformFee;
+    uint256 public constant platformFeeUL = 500; // 5%
+
+    address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+    uint256 public buyBackRate;
+    uint256 public constant buyBackRateUL = 300; // 5%
+
     uint256 public earlyWithdrawFee = 100; // 1%
     uint256 public constant earlyWithdrawFeeUL = 300; // 3%
     uint256 public constant withdrawFeePeriod = 3 days;
@@ -74,12 +82,15 @@ contract SweetVault is Ownable, ReentrancyGuard {
     event ClaimRewards(address indexed user, uint256 shares, uint256 amount);
 
     // Setting updates
-    event SetPath(address[] oldPath, address[] newPath);
+    event SetPathToPacoca(address[] oldPath, address[] newPath);
+    event SetPathToWbnb(address[] oldPath, address[] newPath);
     event SetBuyBackRate(uint256 oldBuyBackRate, uint256 newBuyBackRate);
     event SetTreasury(address oldTreasury, address newTreasury);
     event SetKeeper(address oldKeeper, address newKeeper);
-    event SetKeeperFee(address oldKeeperFee, address newKeeperFee);
-    event SetEarlyWithdrawFee(address oldEarlyWithdrawFee, address newEarlyWithdrawFee);
+    event SetKeeperFee(uint256 oldKeeperFee, uint256 newKeeperFee);
+    event SetPlatform(address oldPlatform, address newPlatform);
+    event SetPlatformFee(uint256 oldPlatformFee, uint256 newPlatformFee);
+    event SetEarlyWithdrawFee(uint256 oldEarlyWithdrawFee, uint256 newEarlyWithdrawFee);
 
     constructor(
         address _autoPacoca,
@@ -89,15 +100,27 @@ contract SweetVault is Ownable, ReentrancyGuard {
         uint256 _farmPid,
         bool _isCakeStaking,
         address _router,
-        address[] memory _path,
+        address[] memory _pathToPacoca,
+        address[] memory _pathToWbnb,
         address _owner,
         address _treasury,
-        address _keeper
+        address _keeper,
+        address _platform,
+        uint256 _buyBackRate,
+        uint256 _platformFee
     ) public {
         require(
-            _path[0] == address(_farmRewardToken) && _path[_path.length - 1] == address(PACOCA),
-            "SweetVault: Incorrect path"
+            _pathToPacoca[0] == address(_farmRewardToken) && _pathToPacoca[_pathToPacoca.length - 1] == address(PACOCA),
+            "SweetVault: Incorrect path to PACOCA"
         );
+
+        require(
+            _pathToWbnb[0] == address(_farmRewardToken) && _pathToWbnb[_pathToWbnb.length - 1] == WBNB,
+            "SweetVault: Incorrect path to WBNB"
+        );
+
+        require(_buyBackRate <= buyBackRateUL);
+        require(_platformFee <= platformFeeUL);
 
         AUTO_PACOCA = IPacocaVault(_autoPacoca);
         STAKED_TOKEN = IERC20(_stakedToken);
@@ -107,11 +130,16 @@ contract SweetVault is Ownable, ReentrancyGuard {
         IS_CAKE_STAKING = _isCakeStaking;
 
         router = IPancakeRouter01(_router);
-        path = _path;
+        pathToPacoca = _pathToPacoca;
+        pathToWbnb = _pathToWbnb;
+
+        buyBackRate = _buyBackRate;
+        platformFee = _platformFee;
 
         transferOwnership(_owner);
         treasury = _treasury;
         keeper = _keeper;
+        platform = _platform;
     }
 
     /**
@@ -123,28 +151,59 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     // 1. Harvest rewards
-    // 2. Convert rewards to $PACOCA
-    // 3. Collect fees
+    // 2. Collect fees
+    // 3. Convert rewards to $PACOCA
     // 4. Stake to pacoca auto-compound vault
-    function earn(uint256 _minPacocaOutput) external onlyKeeper {
+    function earn(
+        uint256 _minPlatformOutput,
+        uint256 _minKeeperOutput,
+        uint256 _minBurnOutput,
+        uint256 _minPacocaOutput
+    ) external onlyKeeper {
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(0);
         } else {
             STAKED_TOKEN_FARM.withdraw(FARM_PID, 0);
         }
 
-        _convertBalanceToPacoca(_minPacocaOutput);
+        uint256 rewardTokenBalance = _rewardTokenBalance();
 
-        uint256 balanceBeforeFees = _pacocaBalance();
+        // Collect platform fees
+        if (platformFee > 0) {
+            _swap(
+                rewardTokenBalance.mul(platformFee).div(10000),
+                _minPlatformOutput,
+                pathToWbnb,
+                platform
+            );
+        }
 
-        _safePACOCATransfer(
-            BURN_ADDRESS,
-            balanceBeforeFees.mul(buyBackRate).div(10000)
-        );
+        // Collect keeper fees
+        if (keeperFee > 0) {
+            _swap(
+                rewardTokenBalance.mul(keeperFee).div(10000),
+                _minKeeperOutput,
+                pathToWbnb,
+                treasury
+            );
+        }
 
-        _safePACOCATransfer(
-            treasury,
-            balanceBeforeFees.mul(keeperFee).div(10000)
+        // Collect Burn fees
+        if (buyBackRate > 0) {
+            _swap(
+                rewardTokenBalance.mul(buyBackRate).div(10000),
+                _minBurnOutput,
+                pathToPacoca,
+                BURN_ADDRESS
+            );
+        }
+
+        // Convert remaining rewards to PACOCA
+        _swap(
+            _rewardTokenBalance(),
+            _minPacocaOutput,
+            pathToPacoca,
+            address(this)
         );
 
         uint256 previousShares = totalAutoPacocaShares();
@@ -274,12 +333,36 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit ClaimRewards(msg.sender, _shares, withdrawAmount);
     }
 
-    function getExpectedPacocaOutput() external view returns (uint256) {
+    function getExpectedOutputs() external view returns (
+        uint256 platformOutput,
+        uint256 keeperOutput,
+        uint256 burnOutput,
+        uint256 pacocaOutput
+    ) {
+        uint256 wbnbOutput = _getExpectedOutput(pathToWbnb);
+        uint256 pacocaOutputWithoutFees = _getExpectedOutput(pathToPacoca);
+
+        platformOutput = wbnbOutput.mul(platformFee).div(10000);
+        keeperOutput = wbnbOutput.mul(keeperFee).div(10000);
+        burnOutput = pacocaOutputWithoutFees.mul(buyBackRate).div(10000);
+
+        pacocaOutput = pacocaOutputWithoutFees.sub(
+            pacocaOutputWithoutFees.mul(platformFee).div(10000).add(
+                pacocaOutputWithoutFees.mul(keeperFee).div(10000)
+            ).add(
+                pacocaOutputWithoutFees.mul(buyBackRate).div(10000)
+            )
+        );
+    }
+
+    function _getExpectedOutput(
+        address[] memory _path
+    ) private view returns (uint256) {
         uint256 rewards = _rewardTokenBalance().add(
             STAKED_TOKEN_FARM.pendingCake(FARM_PID, address(this))
         );
 
-        uint256[] memory amounts = router.getAmountsOut(rewards, path);
+        uint256[] memory amounts = router.getAmountsOut(rewards, _path);
 
         return amounts[amounts.length.sub(1)];
     }
@@ -341,35 +424,51 @@ contract SweetVault is Ownable, ReentrancyGuard {
         }
     }
 
-    function _convertBalanceToPacoca(uint256 _minPacocaOutput) private {
-        uint256 rewardTokenBalance = _rewardTokenBalance();
-
+    function _swap(
+        uint256 _inputAmount,
+        uint256 _minOutputAmount,
+        address[] memory _path,
+        address _to
+    ) private {
         _approveTokenIfNeeded(
             FARM_REWARD_TOKEN,
-            rewardTokenBalance,
+            _inputAmount,
             address(router)
         );
 
         router.swapExactTokensForTokens(
-            rewardTokenBalance, // input amount
-            _minPacocaOutput,
-            path, // path
-            address(this), // to
-            block.timestamp // deadline
+            _inputAmount,
+            _minOutputAmount,
+            _path,
+            _to,
+            block.timestamp
         );
     }
 
-    function setPath(address[] memory _path) external onlyOwner {
+    function setPathToPacoca(address[] memory _path) external onlyOwner {
         require(
             _path[0] == address(FARM_REWARD_TOKEN) && _path[_path.length - 1] == address(PACOCA),
-            "SweetVault: Incorrect path"
+            "SweetVault: Incorrect path to PACOCA"
         );
 
-        address[] memory oldPath = path;
+        address[] memory oldPath = pathToPacoca;
 
-        path = _path;
+        pathToPacoca = _path;
 
-        emit SetPath(oldPath, path);
+        emit SetPathToPacoca(oldPath, pathToPacoca);
+    }
+
+    function setPathToWbnb(address[] memory _path) external onlyOwner {
+        require(
+            _path[0] == address(FARM_REWARD_TOKEN) && _path[_path.length - 1] == WBNB,
+            "SweetVault: Incorrect path to WBNB"
+        );
+
+        address[] memory oldPath = pathToWbnb;
+
+        pathToWbnb = _path;
+
+        emit SetPathToWbnb(oldPath, pathToWbnb);
     }
 
     function setTreasury(address _treasury) external onlyOwner {
@@ -395,7 +494,25 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         keeperFee = _keeperFee;
 
-        emit SetBuyBackRate(oldKeeperFee, keeperFee);
+        emit SetKeeperFee(oldKeeperFee, keeperFee);
+    }
+
+    function setPlatform(address _platform) external onlyOwner {
+        address oldPlatform = platform;
+
+        platform = _platform;
+
+        emit SetPlatform(oldPlatform, platform);
+    }
+
+    function setPlatformFee(uint256 _platformFee) external onlyOwner {
+        require(_platformFee <= platformFeeUL, "SweetVault: Platform fee too high");
+
+        uint256 oldPlatformFee = platformFee;
+
+        platformFee = _platformFee;
+
+        emit SetPlatformFee(oldPlatformFee, platformFee);
     }
 
     function setBuyBackRate(uint256 _buyBackRate) external onlyOwner {
@@ -421,6 +538,6 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         earlyWithdrawFee = _earlyWithdrawFee;
 
-        emit SetBuyBackRate(oldEarlyWithdrawFee, earlyWithdrawFee);
+        emit SetEarlyWithdrawFee(oldEarlyWithdrawFee, earlyWithdrawFee);
     }
 }
