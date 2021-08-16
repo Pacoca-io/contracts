@@ -52,7 +52,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     IPancakeswapFarm immutable public STAKED_TOKEN_FARM;
     IERC20 immutable public FARM_REWARD_TOKEN;
     uint256 immutable public FARM_PID;
-    bool immutable IS_CAKE_STAKING;
+    bool immutable public IS_CAKE_STAKING;
 
     // Settings
     IPancakeRouter01 immutable public router;
