@@ -13,9 +13,12 @@ pragma solidity 0.6.12;
 
 // XXX: import "./SafeMath.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+// XXX: Added SafeERC20 import
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 contract Timelock {
     using SafeMath for uint;
+    using SafeERC20 for IERC20;
 
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
@@ -27,6 +30,9 @@ contract Timelock {
     uint public constant GRACE_PERIOD = 14 days;
     uint public constant MINIMUM_DELAY = 6 hours;
     uint public constant MAXIMUM_DELAY = 30 days;
+
+    // XXX: Added PACOCA
+    IERC20 public PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
 
     address public admin;
     address public pendingAdmin;
@@ -127,5 +133,10 @@ contract Timelock {
     function getBlockTimestamp() internal view returns (uint) {
         // solium-disable-next-line security/no-block-members
         return block.timestamp;
+    }
+
+    // XXX: added claimPacoca()
+    function claimPacoca() external {
+        PACOCA.safeTransfer(admin, PACOCA.balanceOf(address(this)));
     }
 }
