@@ -19,7 +19,7 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "./interfaces/IPancakeswapFarm.sol";
+import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter01.sol";
 import "./interfaces/IPacocaVault.sol";
 
@@ -49,10 +49,12 @@ contract SweetVault is Ownable, ReentrancyGuard {
     uint256 public accSharesPerStakedToken; // Accumulated AUTO_PACOCA shares per staked token, times 1e18.
 
     // Farm info
-    IPancakeswapFarm immutable public STAKED_TOKEN_FARM;
+    IFarm immutable public STAKED_TOKEN_FARM;
     IERC20 immutable public FARM_REWARD_TOKEN;
     uint256 immutable public FARM_PID;
     bool immutable public IS_CAKE_STAKING;
+    bool immutable public IS_WAULT;
+    bool immutable public IS_BISWAP;
 
     // Settings
     IPancakeRouter01 immutable public router;
@@ -124,10 +126,12 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         AUTO_PACOCA = IPacocaVault(_autoPacoca);
         STAKED_TOKEN = IERC20(_stakedToken);
-        STAKED_TOKEN_FARM = IPancakeswapFarm(_stakedTokenFarm);
+        STAKED_TOKEN_FARM = IFarm(_stakedTokenFarm);
         FARM_REWARD_TOKEN = IERC20(_farmRewardToken);
         FARM_PID = _farmPid;
         IS_CAKE_STAKING = _isCakeStaking;
+        IS_WAULT = _stakedTokenFarm == 0x22fB2663C7ca71Adc2cc99481C77Aaf21E152e2D;
+        IS_BISWAP = _stakedTokenFarm == 0xDbc1A13490deeF9c3C12b44FE77b503c1B061739;
 
         router = IPancakeRouter01(_router);
         pathToPacoca = _pathToPacoca;
@@ -162,6 +166,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
     ) external onlyKeeper {
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(0);
+        } else if (IS_WAULT) {
+            STAKED_TOKEN_FARM.withdraw(FARM_PID, 0, true);
         } else {
             STAKED_TOKEN_FARM.withdraw(FARM_PID, 0);
         }
@@ -243,6 +249,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.enterStaking(_amount);
+        } else if (IS_WAULT) {
+            STAKED_TOKEN_FARM.deposit(FARM_PID, _amount, false);
         } else {
             STAKED_TOKEN_FARM.deposit(FARM_PID, _amount);
         }
@@ -267,6 +275,8 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(_amount);
+        } else if (IS_WAULT) {
+            STAKED_TOKEN_FARM.withdraw(FARM_PID, _amount, false);
         } else {
             STAKED_TOKEN_FARM.withdraw(FARM_PID, _amount);
         }
@@ -358,9 +368,17 @@ contract SweetVault is Ownable, ReentrancyGuard {
     function _getExpectedOutput(
         address[] memory _path
     ) private view returns (uint256) {
-        uint256 rewards = _rewardTokenBalance().add(
-            STAKED_TOKEN_FARM.pendingCake(FARM_PID, address(this))
-        );
+        uint256 pending;
+
+        if (IS_WAULT) {
+            pending = STAKED_TOKEN_FARM.pendingWex(FARM_PID, address(this));
+        } else if (IS_BISWAP) {
+            pending = STAKED_TOKEN_FARM.pendingBSW(FARM_PID, address(this));
+        } else {
+            pending = STAKED_TOKEN_FARM.pendingCake(FARM_PID, address(this));
+        }
+
+        uint256 rewards = _rewardTokenBalance().add(pending);
 
         uint256[] memory amounts = router.getAmountsOut(rewards, _path);
 
