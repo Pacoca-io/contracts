@@ -137,9 +137,11 @@ contract BnbVault is Ownable, ReentrancyGuard {
     function pendingRewards(address _user) external view returns (uint) {
         UserInfo storage user = userInfo[_user];
 
+        uint pending = BNB_STORAGE.balance().mul(user.stake).div(pacocaBalance());
+
         return user.stake.mul(accBnbPerStakedToken).div(1e18).sub(
             user.rewardDebt
-        );
+        ).add(pending);
     }
 
     function _collect() private {
