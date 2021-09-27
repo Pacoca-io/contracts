@@ -95,6 +95,8 @@ contract BnbVault is Ownable, ReentrancyGuard {
     }
 
     function withdraw(uint _amount) public nonReentrant {
+        _collect();
+
         UserInfo storage user = userInfo[msg.sender];
 
         require(user.stake > 0, "BnbVault::withdraw: User has no stake");
