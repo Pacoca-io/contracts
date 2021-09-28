@@ -24,6 +24,11 @@ contract Pool is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    struct UserInfo {
+        uint256 amount; // How many staked tokens the user has provided
+        uint256 rewardDebt; // Reward debt
+    }
+
     // Accrued token per share
     uint256 public accTokenPerShare;
 
@@ -48,21 +53,18 @@ contract Pool is Ownable, ReentrancyGuard {
     // Info of each user that stakes tokens (stakedToken)
     mapping(address => UserInfo) public userInfo;
 
-    struct UserInfo {
-        uint256 amount; // How many staked tokens the user has provided
-        uint256 rewardDebt; // Reward debt
-    }
-
-    event AdminTokenRecovery(address tokenRecovered, uint256 amount);
     event Deposit(address indexed user, uint256 amount);
-    event EmergencyWithdraw(address indexed user, uint256 amount);
-    event NewRewardPerBlock(uint256 rewardPerBlock);
     event Withdraw(address indexed user, uint256 amount);
+    event EmergencyWithdraw(address indexed user, uint256 amount);
+    event EmergencyRewardWithdraw(uint256 amount);
+    event NewRewardPerBlock(uint256 rewardPerBlock);
+    event AdminTokenRecovery(address tokenRecovered, uint256 amount);
 
     /*
      * @notice Initialize the contract
      * @param _stakedToken: staked token address
      * @param _rewardToken: reward token address
+     * @param _rewardTokenDecimals: reward token decimals
      * @param _rewardPerBlock: reward per block (in rewardToken)
      * @param _startBlock: start block
      * @param _admin: admin address with ownership
@@ -167,6 +169,8 @@ contract Pool is Ownable, ReentrancyGuard {
      */
     function emergencyRewardWithdraw(uint256 _amount) external onlyOwner {
         rewardToken.safeTransfer(address(msg.sender), _amount);
+
+        emit EmergencyRewardWithdraw(_amount);
     }
 
     /**
