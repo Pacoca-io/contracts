@@ -1,7 +1,3 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity 0.6.12;
-
 /**
                                                          __
      _____      __      ___    ___     ___     __       /\_\    ___
@@ -15,6 +11,10 @@ pragma solidity 0.6.12;
     The sweetest DeFi portfolio manager.
 
 **/
+
+// SPDX-License-Identifier: MIT
+
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -31,6 +31,9 @@ contract Pool is Ownable, ReentrancyGuard {
 
     // Accrued token per share
     uint256 public accTokenPerShare;
+
+    // The block number when mining ends. Never ends if set to zero
+    uint256 public bonusEndBlock;
 
     // The block number when mining starts.
     uint256 public startBlock;
@@ -67,6 +70,7 @@ contract Pool is Ownable, ReentrancyGuard {
      * @param _rewardTokenDecimals: reward token decimals
      * @param _rewardPerBlock: reward per block (in rewardToken)
      * @param _startBlock: start block
+     * @param _bonusEndBlock: end block
      * @param _admin: admin address with ownership
      */
     constructor(
@@ -75,12 +79,14 @@ contract Pool is Ownable, ReentrancyGuard {
         uint256 _rewardTokenDecimals,
         uint256 _rewardPerBlock,
         uint256 _startBlock,
+        uint256 _bonusEndBlock,
         address _admin
     ) public {
         stakedToken = IERC20(_stakedToken);
         rewardToken = IERC20(_rewardToken);
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
+        bonusEndBlock = _bonusEndBlock;
 
         require(_rewardTokenDecimals < 30, "Must be inferior to 30");
 
@@ -197,6 +203,8 @@ contract Pool is Ownable, ReentrancyGuard {
      * @param _rewardPerBlock: the reward per block
      */
     function updateRewardPerBlock(uint256 _rewardPerBlock) external onlyOwner {
+        require(bonusEndBlock == 0 || block.number < startBlock, "Pool has started");
+
         _updatePool();
 
         rewardPerBlock = _rewardPerBlock;
@@ -254,7 +262,13 @@ contract Pool is Ownable, ReentrancyGuard {
     function _getMultiplier(
         uint256 _from,
         uint256 _to
-    ) internal pure returns (uint256) {
-        return _to.sub(_from);
+    ) internal view returns (uint256) {
+        if (_to <= bonusEndBlock || bonusEndBlock == 0) {
+            return _to.sub(_from);
+        } else if (_from >= bonusEndBlock) {
+            return 0;
+        } else {
+            return bonusEndBlock.sub(_from);
+        }
     }
 }
