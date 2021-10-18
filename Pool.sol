@@ -82,6 +82,8 @@ contract Pool is Ownable, ReentrancyGuard {
         uint256 _bonusEndBlock,
         address _admin
     ) public {
+        require(_stakedToken != _rewardToken, "Staked and reward token must be different");
+
         stakedToken = IERC20(_stakedToken);
         rewardToken = IERC20(_rewardToken);
         rewardPerBlock = _rewardPerBlock;
@@ -152,7 +154,7 @@ contract Pool is Ownable, ReentrancyGuard {
     }
 
     /*
-     * @notice Withdraw staked tokens without caring about rewards rewards
+     * @notice Withdraw staked tokens without caring about rewards
      * @dev Needs to be for emergency.
      */
     function emergencyWithdraw() external nonReentrant {
