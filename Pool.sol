@@ -68,6 +68,7 @@ contract Pool is Ownable, ReentrancyGuard {
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
+    event Compound(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
     event EmergencyRewardWithdraw(uint256 amount);
     event NewRewardPerBlock(uint256 rewardPerBlock);
@@ -147,6 +148,45 @@ contract Pool is Ownable, ReentrancyGuard {
         user.rewardDebt = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR);
 
         emit Deposit(msg.sender, _amount);
+    }
+
+    function compound(
+        address _router,
+        address[] calldata _path,
+        uint256 _minOutput
+    ) external nonReentrant {
+        require(
+            _path[0] == address(rewardToken) && _path[_path.length - 1] == address(stakedToken),
+            "compound: Invalid path"
+        );
+
+        UserInfo storage user = userInfo[msg.sender];
+
+        _updatePool();
+
+        if (user.amount == 0) {
+            return;
+        }
+
+        uint256 pending = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR).sub(user.rewardDebt);
+        uint256 initialBalance = stakedToken.balanceOf(address(this));
+
+        rewardToken.safeIncreaseAllowance(_router, pending);
+
+        IPancakeRouter01(_router).swapExactTokensForTokens(
+            pending,
+            _minOutput,
+            _path,
+            address(this),
+            block.timestamp
+        );
+
+        uint256 amount = stakedToken.balanceOf(address(this)).sub(initialBalance);
+
+        user.amount = user.amount.add(amount);
+        user.rewardDebt = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR);
+
+        emit Compound(msg.sender, amount);
     }
 
     /*
