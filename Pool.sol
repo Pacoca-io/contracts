@@ -141,8 +141,11 @@ contract Pool is Ownable, ReentrancyGuard {
         }
 
         if (_amount > 0) {
-            user.amount = user.amount.add(_amount);
+            uint256 initialBalance = stakedToken.balanceOf(address(this));
             stakedToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+
+            uint256 receivedAmount = stakedToken.balanceOf(address(this)).sub(initialBalance);
+            user.amount = user.amount.add(receivedAmount);
         }
 
         user.rewardDebt = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR);
