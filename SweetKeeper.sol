@@ -26,12 +26,7 @@ interface ILegacyVault {
 interface ISweetVault {
     function earn(uint, uint, uint, uint) external;
 
-    function getExpectedOutputs() external view returns (
-        uint platformOutput,
-        uint keeperOutput,
-        uint burnOutput,
-        uint pacocaOutput
-    );
+    function getExpectedOutputs() external view returns (uint, uint, uint, uint);
 }
 
 interface KeeperCompatibleInterface {
