@@ -45,6 +45,11 @@ interface KeeperCompatibleInterface {
 contract SweetKeeper is Ownable, KeeperCompatibleInterface {
     using SafeMath for uint;
 
+    struct VaultInfo {
+        uint lastCompound;
+        bool enabled;
+    }
+
     struct CompoundInfo {
         address[] legacyVaults;
         address[] sweetVaults;
@@ -54,19 +59,26 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
         uint[] minPacocaOutputs;
     }
 
-    mapping(address => uint) public lastCompounds;
+    address[] public legacyVaults;
+    address[] public sweetVaults;
+
+    mapping(address => VaultInfo) public vaultInfos;
 
     address public keeper;
+    address public moderator;
 
     uint public maxDelay = 1 days;
     uint public minKeeperFee = 5500000000000000;
     uint public slippageFactor = 9600; // 4%
+    uint16 public maxVaults = 20;
 
     constructor(
         address _keeper,
+        address _moderator,
         address _owner
     ) public {
         keeper = _keeper;
+        moderator = _moderator;
 
         transferOwnership(_owner);
     }
@@ -76,17 +88,17 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
         _;
     }
 
+    modifier onlyModerator() {
+        require(msg.sender == moderator, "SweetKeeper::onlyModerator: Not moderator");
+        _;
+    }
+
     function checkUpkeep(
-        bytes calldata checkData
+        bytes calldata
     ) external override view returns (
         bool upkeepNeeded,
         bytes memory performData
     ) {
-        (address[] memory legacyVaults, address[] memory sweetVaults) = abi.decode(
-            checkData,
-            (address[], address[])
-        );
-
         CompoundInfo memory tempCompoundInfo = CompoundInfo(
             new address[](legacyVaults.length),
             new address[](sweetVaults.length),
@@ -96,16 +108,25 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
             new uint[](sweetVaults.length)
         );
 
-        uint legacyVaultsLength = 0;
-        uint sweetVaultsLength = 0;
+        uint16 legacyVaultsLength = 0;
+        uint16 sweetVaultsLength = 0;
 
-        for (uint index = 0; index < sweetVaults.length; ++index) {
+        for (uint16 index = 0; index < sweetVaults.length; ++index) {
+            if (maxVaults == sweetVaultsLength) {
+                continue;
+            }
+
             address vault = sweetVaults[index];
+            VaultInfo memory vaultInfo = vaultInfos[vault];
+
+            if (!vaultInfo.enabled) {
+                continue;
+            }
 
             (uint platformOutput, uint keeperOutput, uint burnOutput, uint pacocaOutput) = _getExpectedOutputs(vault);
 
             if (
-                block.timestamp >= lastCompounds[vault] + maxDelay
+                block.timestamp >= vaultInfo.lastCompound + maxDelay
                 || keeperOutput >= minKeeperFee
             ) {
                 tempCompoundInfo.sweetVaults[sweetVaultsLength] = vault;
@@ -119,10 +140,19 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
             }
         }
 
-        for (uint index = 0; index < legacyVaults.length; ++index) {
-            address vault = legacyVaults[index];
+        for (uint16 index = 0; index < legacyVaults.length; ++index) {
+            if (maxVaults == (sweetVaultsLength + legacyVaultsLength)) {
+                continue;
+            }
 
-            if (block.timestamp >= lastCompounds[vault] + maxDelay) {
+            address vault = legacyVaults[index];
+            VaultInfo memory vaultInfo = vaultInfos[vault];
+
+            if (!vaultInfo.enabled) {
+                continue;
+            }
+
+            if (block.timestamp >= vaultInfo.lastCompound + maxDelay) {
                 tempCompoundInfo.legacyVaults[legacyVaultsLength] = vault;
 
                 legacyVaultsLength = legacyVaultsLength + 1;
@@ -139,11 +169,11 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
                 new uint[](sweetVaultsLength)
             );
 
-            for (uint index = 0; index < legacyVaultsLength; ++index) {
+            for (uint16 index = 0; index < legacyVaultsLength; ++index) {
                 compoundInfo.legacyVaults[index] = tempCompoundInfo.legacyVaults[index];
             }
 
-            for (uint index = 0; index < sweetVaultsLength; ++index) {
+            for (uint16 index = 0; index < sweetVaultsLength; ++index) {
                 compoundInfo.sweetVaults[index] = tempCompoundInfo.sweetVaults[index];
                 compoundInfo.minPlatformOutputs[index] = tempCompoundInfo.minPlatformOutputs[index];
                 compoundInfo.minKeeperOutputs[index] = tempCompoundInfo.minKeeperOutputs[index];
@@ -168,24 +198,24 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
         bytes calldata performData
     ) external override onlyKeeper {
         (
-        address[] memory legacyVaults,
-        address[] memory sweetVaults,
-        uint[] memory minPlatformOutputs,
-        uint[] memory minKeeperOutputs,
-        uint[] memory minBurnOutputs,
-        uint[] memory minPacocaOutputs
+        address[] memory _legacyVaults,
+        address[] memory _sweetVaults,
+        uint[] memory _minPlatformOutputs,
+        uint[] memory _minKeeperOutputs,
+        uint[] memory _minBurnOutputs,
+        uint[] memory _minPacocaOutputs
         ) = abi.decode(
             performData,
             (address[], address[], uint[], uint[], uint[], uint[])
         );
 
         _earn(
-            legacyVaults,
-            sweetVaults,
-            minPlatformOutputs,
-            minKeeperOutputs,
-            minBurnOutputs,
-            minPacocaOutputs
+            _legacyVaults,
+            _sweetVaults,
+            _minPlatformOutputs,
+            _minKeeperOutputs,
+            _minBurnOutputs,
+            _minPacocaOutputs
         );
     }
 
@@ -204,7 +234,7 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
 
             ILegacyVault(vault).earn();
 
-            lastCompounds[vault] = block.timestamp;
+            vaultInfos[vault].lastCompound = block.timestamp;
         }
 
         uint sweetLength = _sweetVaults.length;
@@ -219,7 +249,7 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
                 _minPacocaOutputs[index]
             );
 
-            lastCompounds[vault] = block.timestamp;
+            vaultInfos[vault].lastCompound = block.timestamp;
         }
     }
 
@@ -242,8 +272,34 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
         return (0, 0, 0, 0);
     }
 
+    function addVault(address _vault, bool _legacy) public onlyModerator {
+        vaultInfos[_vault] = VaultInfo(
+            block.timestamp - 6 hours,
+            true
+        );
+
+        if (_legacy) {
+            legacyVaults.push(_vault);
+        }
+        else {
+            sweetVaults.push(_vault);
+        }
+    }
+
+    function enableVault(address _vault) external onlyModerator {
+        vaultInfos[_vault].enabled = true;
+    }
+
+    function disableVault(address _vault) external onlyModerator {
+        vaultInfos[_vault].enabled = false;
+    }
+
     function setKeeper(address _keeper) public onlyOwner {
         keeper = _keeper;
+    }
+
+    function setModerator(address _moderator) public onlyOwner {
+        moderator = _moderator;
     }
 
     function setMaxDelay(uint _maxDelay) public onlyOwner {
