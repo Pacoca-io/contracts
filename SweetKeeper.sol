@@ -273,6 +273,11 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
     }
 
     function addVault(address _vault, bool _legacy) public onlyModerator {
+        require(
+            vaultInfos[_vault].lastCompound == 0,
+            "SweetKeeper::addVault: Vault already exists"
+        );
+
         vaultInfos[_vault] = VaultInfo(
             block.timestamp - 6 hours,
             true
