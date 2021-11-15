@@ -27,6 +27,8 @@ interface ISweetVault {
     function earn(uint, uint, uint, uint) external;
 
     function getExpectedOutputs() external view returns (uint, uint, uint, uint);
+
+    function totalStake() external view returns (uint256);
 }
 
 interface KeeperCompatibleInterface {
@@ -119,7 +121,7 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
             address vault = sweetVaults[index];
             VaultInfo memory vaultInfo = vaultInfos[vault];
 
-            if (!vaultInfo.enabled) {
+            if (!vaultInfo.enabled || ISweetVault(vault).totalStake() == 0) {
                 continue;
             }
 
