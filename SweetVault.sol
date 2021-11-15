@@ -230,7 +230,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         );
     }
 
-    function deposit(uint256 _amount) external nonReentrant {
+    function deposit(uint256 _amount) external virtual nonReentrant {
         require(_amount > 0, "SweetVault: amount must be greater than zero");
 
         UserInfo storage user = userInfo[msg.sender];
@@ -367,7 +367,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
 
     function _getExpectedOutput(
         address[] memory _path
-    ) private view returns (uint256) {
+    ) internal virtual view returns (uint256) {
         uint256 pending;
 
         if (IS_WAULT) {
@@ -407,13 +407,13 @@ contract SweetVault is Ownable, ReentrancyGuard {
         IERC20 _token,
         uint256 _amount,
         address _spender
-    ) private {
+    ) internal {
         if (_token.allowance(address(this), _spender) < _amount) {
             _token.safeIncreaseAllowance(_spender, _amount);
         }
     }
 
-    function _rewardTokenBalance() private view returns (uint256) {
+    function _rewardTokenBalance() internal view returns (uint256) {
         return FARM_REWARD_TOKEN.balanceOf(address(this));
     }
 
