@@ -14,10 +14,12 @@ interface IFarm {
     function pendingCake(uint256 _pid, address _user) external view returns (uint256);
     function pendingBSW(uint256 _pid, address _user) external view returns (uint256);
     function pendingWex(uint256 _pid, address _user) external view returns (uint256);
+    function pendingEarnings(uint256 _pid, address _user) external view returns (uint256);
 
     // Deposit LP tokens to MasterChef for CAKE allocation.
     function deposit(uint256 _pid, uint256 _amount) external;
     function deposit(uint256 _pid, uint256 _amount, bool _withdrawRewards) external;
+    function deposit(uint256 _pid, uint256 _amount, address _referrer) external;
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _pid, uint256 _amount) external;
