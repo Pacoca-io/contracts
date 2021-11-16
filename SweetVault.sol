@@ -20,7 +20,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/IFarm.sol";
-import "./interfaces/IPancakeRouter01.sol";
+import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 
 contract SweetVault is Ownable, ReentrancyGuard {
@@ -57,7 +57,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     bool immutable public IS_BISWAP;
 
     // Settings
-    IPancakeRouter01 immutable public router;
+    IPancakeRouter02 immutable public router;
     address[] public pathToPacoca; // Path from staked token to PACOCA
     address[] public pathToWbnb; // Path from staked token to WBNB
 
@@ -133,7 +133,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         IS_WAULT = _stakedTokenFarm == 0x22fB2663C7ca71Adc2cc99481C77Aaf21E152e2D;
         IS_BISWAP = _stakedTokenFarm == 0xDbc1A13490deeF9c3C12b44FE77b503c1B061739;
 
-        router = IPancakeRouter01(_router);
+        router = IPancakeRouter02(_router);
         pathToPacoca = _pathToPacoca;
         pathToWbnb = _pathToWbnb;
 
@@ -267,7 +267,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         emit Deposit(msg.sender, _amount);
     }
 
-    function withdraw(uint256 _amount) external nonReentrant {
+    function withdraw(uint256 _amount) external virtual nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
 
         require(_amount > 0, "SweetVault: amount must be greater than zero");
@@ -315,7 +315,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         _claimRewards(_shares, true);
     }
 
-    function _claimRewards(uint256 _shares, bool _update) private {
+    function _claimRewards(uint256 _shares, bool _update) internal {
         UserInfo storage user = userInfo[msg.sender];
 
         if (_update) {
@@ -447,7 +447,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         uint256 _minOutputAmount,
         address[] memory _path,
         address _to
-    ) private {
+    ) internal virtual {
         _approveTokenIfNeeded(
             FARM_REWARD_TOKEN,
             _inputAmount,

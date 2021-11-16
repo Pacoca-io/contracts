@@ -58,30 +58,75 @@ contract SweetVault_Honey is SweetVault {
 
         UserInfo storage user = userInfo[msg.sender];
 
+        uint256 initialBalance = _stakedTokenBalance();
+        uint256 initialStake = totalStake();
+
         STAKED_TOKEN.safeTransferFrom(
             address(msg.sender),
             address(this),
             _amount
         );
 
+        uint256 amountReceived = _stakedTokenBalance().sub(initialBalance);
+
         _approveTokenIfNeeded(
             STAKED_TOKEN,
-            _amount,
+            amountReceived,
             address(STAKED_TOKEN_FARM)
         );
 
-        STAKED_TOKEN_FARM.deposit(FARM_PID, _amount, treasury);
+        STAKED_TOKEN_FARM.deposit(FARM_PID, amountReceived, treasury);
 
         user.autoPacocaShares = user.autoPacocaShares.add(
             user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
                 user.rewardDebt
             )
         );
-        user.stake = user.stake.add(_amount);
+        user.stake = user.stake.add(totalStake().sub(initialStake));
         user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
         user.lastDepositedTime = block.timestamp;
 
         emit Deposit(msg.sender, _amount);
+    }
+
+    function withdraw(uint256 _amount) external override nonReentrant {
+        UserInfo storage user = userInfo[msg.sender];
+
+        require(_amount > 0, "SweetVault: amount must be greater than zero");
+        require(user.stake >= _amount, "SweetVault: withdraw amount exceeds balance");
+
+        uint256 initialBalance = _stakedTokenBalance();
+
+        STAKED_TOKEN_FARM.withdraw(FARM_PID, _amount);
+
+        uint256 currentAmount = _stakedTokenBalance().sub(initialBalance);
+
+        if (block.timestamp < user.lastDepositedTime.add(withdrawFeePeriod)) {
+            uint256 currentWithdrawFee = currentAmount.mul(earlyWithdrawFee).div(10000);
+
+            STAKED_TOKEN.safeTransfer(treasury, currentWithdrawFee);
+
+            currentAmount = currentAmount.sub(currentWithdrawFee);
+
+            emit EarlyWithdraw(msg.sender, _amount, currentWithdrawFee);
+        }
+
+        user.autoPacocaShares = user.autoPacocaShares.add(
+            user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
+                user.rewardDebt
+            )
+        );
+        user.stake = user.stake.sub(_amount);
+        user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
+
+        // Withdraw pacoca rewards if user leaves
+        if (user.stake == 0 && user.autoPacocaShares > 0) {
+            _claimRewards(user.autoPacocaShares, false);
+        }
+
+        STAKED_TOKEN.safeTransfer(msg.sender, currentAmount);
+
+        emit Withdraw(msg.sender, currentAmount);
     }
 
     function _getExpectedOutput(
@@ -94,5 +139,30 @@ contract SweetVault_Honey is SweetVault {
         uint256[] memory amounts = router.getAmountsOut(rewards, _path);
 
         return amounts[amounts.length.sub(1)];
+    }
+
+    function _stakedTokenBalance() private view returns (uint256) {
+        return STAKED_TOKEN.balanceOf(address(this));
+    }
+
+    function _swap(
+        uint256 _inputAmount,
+        uint256 _minOutputAmount,
+        address[] memory _path,
+        address _to
+    ) internal override {
+        _approveTokenIfNeeded(
+            FARM_REWARD_TOKEN,
+            _inputAmount,
+            address(router)
+        );
+
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _inputAmount,
+            _minOutputAmount,
+            _path,
+            _to,
+            block.timestamp
+        );
     }
 }
