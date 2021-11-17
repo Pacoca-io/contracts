@@ -28,7 +28,7 @@ interface ISweetVault {
 
     function getExpectedOutputs() external view returns (uint, uint, uint, uint);
 
-    function totalStake() external view returns (uint256);
+    function totalStake() external view returns (uint);
 }
 
 interface KeeperCompatibleInterface {
@@ -72,7 +72,7 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
     uint public maxDelay = 1 days;
     uint public minKeeperFee = 5500000000000000;
     uint public slippageFactor = 9600; // 4%
-    uint16 public maxVaults = 20;
+    uint16 public maxVaults = 3;
 
     constructor(
         address _keeper,
@@ -274,6 +274,14 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
         return (0, 0, 0, 0);
     }
 
+    function legacyVaultsLength() external view returns (uint) {
+        return legacyVaults.length;
+    }
+
+    function sweetVaultsLength() external view returns (uint) {
+        return sweetVaults.length;
+    }
+
     function addVault(address _vault, bool _legacy) public onlyModerator {
         require(
             vaultInfos[_vault].lastCompound == 0,
@@ -319,5 +327,9 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
 
     function setSlippageFactor(uint _slippageFactor) public onlyOwner {
         slippageFactor = _slippageFactor;
+    }
+
+    function setMaxVaults(uint16 _maxVaults) public onlyOwner {
+        maxVaults = _maxVaults;
     }
 }
