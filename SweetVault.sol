@@ -243,13 +243,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
             address(STAKED_TOKEN_FARM)
         );
 
-        if (IS_CAKE_STAKING) {
-            STAKED_TOKEN_FARM.enterStaking(_amount);
-        } else if (IS_WAULT) {
-            STAKED_TOKEN_FARM.deposit(FARM_PID, _amount, false);
-        } else {
-            STAKED_TOKEN_FARM.deposit(FARM_PID, _amount);
-        }
+        _deposit(_amount);
 
         user.autoPacocaShares = user.autoPacocaShares.add(
             user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
@@ -261,6 +255,14 @@ contract SweetVault is Ownable, ReentrancyGuard {
         user.lastDepositedTime = block.timestamp;
 
         emit Deposit(msg.sender, _amount);
+    }
+
+    function _deposit(uint256 _amount) internal virtual {
+        if (IS_CAKE_STAKING) {
+            STAKED_TOKEN_FARM.enterStaking(_amount);
+        } else {
+            STAKED_TOKEN_FARM.deposit(FARM_PID, _amount);
+        }
     }
 
     function withdraw(uint256 _amount) external virtual nonReentrant {
