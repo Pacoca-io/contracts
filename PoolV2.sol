@@ -35,6 +35,9 @@ contract Pool is Ownable, ReentrancyGuard {
         uint256 rewardDebt; // Reward debt
     }
 
+    // Amount of tokens deposited by stakers
+    uint256 public stakedTokenSupply;
+
     // Accrued token per share
     uint256 public accTokenPerShare;
 
@@ -93,8 +96,6 @@ contract Pool is Ownable, ReentrancyGuard {
         uint256 _bonusEndBlock,
         address _admin
     ) public {
-        require(_stakedToken != _rewardToken, "Staked and reward token must be different");
-
         WBNB = IWBNB(_wbnb);
         stakedToken = IERC20(_stakedToken);
         rewardToken = IERC20(_rewardToken);
@@ -129,6 +130,7 @@ contract Pool is Ownable, ReentrancyGuard {
 
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR).sub(user.rewardDebt);
+
             if (pending > 0) {
                 if (IS_BNB_REWARDS) {
                     WBNB.withdraw(pending);
@@ -145,6 +147,7 @@ contract Pool is Ownable, ReentrancyGuard {
 
             uint256 receivedAmount = stakedToken.balanceOf(address(this)).sub(initialBalance);
             user.amount = user.amount.add(receivedAmount);
+            stakedTokenSupply = stakedTokenSupply.add(receivedAmount);
         }
 
         user.rewardDebt = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR);
@@ -166,6 +169,7 @@ contract Pool is Ownable, ReentrancyGuard {
 
         if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
+            stakedTokenSupply = stakedTokenSupply.sub(_amount);
             stakedToken.safeTransfer(address(msg.sender), _amount);
         }
 
@@ -251,7 +255,6 @@ contract Pool is Ownable, ReentrancyGuard {
      */
     function pendingReward(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
-        uint256 stakedTokenSupply = stakedToken.balanceOf(address(this));
 
         if (block.number > lastRewardBlock && stakedTokenSupply != 0) {
             uint256 multiplier = _getMultiplier(lastRewardBlock, block.number);
@@ -271,8 +274,6 @@ contract Pool is Ownable, ReentrancyGuard {
         if (block.number <= lastRewardBlock) {
             return;
         }
-
-        uint256 stakedTokenSupply = stakedToken.balanceOf(address(this));
 
         if (stakedTokenSupply == 0) {
             lastRewardBlock = block.number;
