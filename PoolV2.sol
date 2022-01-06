@@ -22,10 +22,6 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "./interfaces/IPancakeRouter01.sol";
 
-interface IWBNB {
-    function withdraw(uint) external;
-}
-
 contract Pool is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -62,10 +58,6 @@ contract Pool is Ownable, ReentrancyGuard {
     // The staked token
     IERC20 public immutable stakedToken;
 
-    // WBNB address
-    IWBNB public immutable WBNB;
-    bool public immutable IS_BNB_REWARDS;
-
     // Info of each user that stakes tokens (stakedToken)
     mapping(address => UserInfo) public userInfo;
 
@@ -87,7 +79,6 @@ contract Pool is Ownable, ReentrancyGuard {
      * @param _admin: admin address with ownership
      */
     constructor(
-        address _wbnb,
         address _stakedToken,
         address _rewardToken,
         uint256 _rewardTokenDecimals,
@@ -96,7 +87,6 @@ contract Pool is Ownable, ReentrancyGuard {
         uint256 _bonusEndBlock,
         address _admin
     ) public {
-        WBNB = IWBNB(_wbnb);
         stakedToken = IERC20(_stakedToken);
         rewardToken = IERC20(_rewardToken);
         rewardPerBlock = _rewardPerBlock;
@@ -109,8 +99,6 @@ contract Pool is Ownable, ReentrancyGuard {
 
         // Set the lastRewardBlock as the startBlock
         lastRewardBlock = startBlock;
-
-        IS_BNB_REWARDS = _rewardToken == _wbnb;
 
         // Transfer ownership to the admin address who becomes owner of the contract
         transferOwnership(_admin);
@@ -132,12 +120,7 @@ contract Pool is Ownable, ReentrancyGuard {
             uint256 pending = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR).sub(user.rewardDebt);
 
             if (pending > 0) {
-                if (IS_BNB_REWARDS) {
-                    WBNB.withdraw(pending);
-                    msg.sender.transfer(pending);
-                } else {
-                    rewardToken.safeTransfer(address(msg.sender), pending);
-                }
+                rewardToken.safeTransfer(address(msg.sender), pending);
             }
         }
 
@@ -174,12 +157,7 @@ contract Pool is Ownable, ReentrancyGuard {
         }
 
         if (pending > 0) {
-            if (IS_BNB_REWARDS) {
-                WBNB.withdraw(pending);
-                msg.sender.transfer(pending);
-            } else {
-                rewardToken.safeTransfer(address(msg.sender), pending);
-            }
+            rewardToken.safeTransfer(address(msg.sender), pending);
         }
 
         user.rewardDebt = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR);
