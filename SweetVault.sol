@@ -161,7 +161,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         uint256 _minKeeperOutput,
         uint256 _minBurnOutput,
         uint256 _minPacocaOutput
-    ) external onlyKeeper {
+    ) external virtual onlyKeeper {
         if (IS_CAKE_STAKING) {
             STAKED_TOKEN_FARM.leaveStaking(0);
         } else {
@@ -426,7 +426,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     }
 
     // Safe PACOCA transfer function, just in case if rounding error causes pool to not have enough
-    function _safePACOCATransfer(address _to, uint256 _amount) private {
+    function _safePACOCATransfer(address _to, uint256 _amount) internal {
         uint256 balance = _pacocaBalance();
 
         if (_amount > balance) {

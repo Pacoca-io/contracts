@@ -13,8 +13,8 @@ interface IFarm {
     // View function to see pending CAKEs on frontend.
     function pendingCake(uint256 _pid, address _user) external view returns (uint256);
     function pendingBSW(uint256 _pid, address _user) external view returns (uint256);
-    function pendingWex(uint256 _pid, address _user) external view returns (uint256);
     function pendingEarnings(uint256 _pid, address _user) external view returns (uint256);
+    function pendingPACOCA(uint256 _pid, address _user) external view returns (uint256);
 
     // Deposit LP tokens to MasterChef for CAKE allocation.
     function deposit(uint256 _pid, uint256 _amount) external;
