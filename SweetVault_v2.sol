@@ -23,7 +23,7 @@ import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 
-contract SweetVault_v2 is Ownable, ReentrancyGuard {
+contract SweetVault is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -39,7 +39,7 @@ contract SweetVault_v2 is Ownable, ReentrancyGuard {
     }
 
     // Addresses
-    IERC20 constant public WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
+    address constant public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     IERC20 constant public PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
     IPacocaVault immutable public AUTO_PACOCA;
     IERC20 immutable public STAKED_TOKEN;
@@ -56,7 +56,6 @@ contract SweetVault_v2 is Ownable, ReentrancyGuard {
     bool immutable public IS_BISWAP;
 
     // Settings
-    uint256 internal feeFactor = 10000;
     IPancakeRouter02 immutable public router;
     address[] public pathToPacoca; // Path from staked token to PACOCA
     address[] public pathToWbnb; // Path from staked token to WBNB
@@ -117,7 +116,7 @@ contract SweetVault_v2 is Ownable, ReentrancyGuard {
         );
 
         require(
-            _pathToWbnb[0] == address(_farmRewardToken) && _pathToWbnb[_pathToWbnb.length - 1] == address(WBNB),
+            _pathToWbnb[0] == address(_farmRewardToken) && _pathToWbnb[_pathToWbnb.length - 1] == WBNB,
             "SweetVault: Incorrect path to WBNB"
         );
 
@@ -171,31 +170,24 @@ contract SweetVault_v2 is Ownable, ReentrancyGuard {
 
         uint256 rewardTokenBalance = _rewardTokenBalance();
 
-        if (platformFee > 0 || keeperFee > 0) {
-            uint256 totalWbnbFee = platformFee.add(keeperFee);
-
+        // Collect platform fees
+        if (platformFee > 0) {
             _swap(
-                rewardTokenBalance.mul(totalWbnbFee).div(feeFactor),
-                _minPlatformOutput.add(_minKeeperOutput),
+                rewardTokenBalance.mul(platformFee).div(10000),
+                _minPlatformOutput,
                 pathToWbnb,
-                address(this)
+                platform
             );
+        }
 
-            if (platformFee > 0) {
-                _safeTokenTransfer(
-                    WBNB,
-                    platform,
-                    platformFee.mul(feeFactor).div(totalWbnbFee).mul(WBNB.balanceOf(address(this))).div(feeFactor)
-                );
-            }
-
-            if (keeperFee > 0) {
-                _safeTokenTransfer(
-                    WBNB,
-                    treasury,
-                    WBNB.balanceOf(address(this))
-                );
-            }
+        // Collect keeper fees
+        if (keeperFee > 0) {
+            _swap(
+                rewardTokenBalance.mul(keeperFee).div(10000),
+                _minKeeperOutput,
+                pathToWbnb,
+                treasury
+            );
         }
 
         // Collect Burn fees
@@ -342,7 +334,7 @@ contract SweetVault_v2 is Ownable, ReentrancyGuard {
 
         uint256 withdrawAmount = _pacocaBalance().sub(pacocaBalanceBefore);
 
-        _safeTokenTransfer(PACOCA, msg.sender, withdrawAmount);
+        _safePACOCATransfer(msg.sender, withdrawAmount);
 
         emit ClaimRewards(msg.sender, _shares, withdrawAmount);
     }
@@ -433,14 +425,14 @@ contract SweetVault_v2 is Ownable, ReentrancyGuard {
         return shares;
     }
 
-    // Safe token transfer function, just in case if rounding error causes pool to not have enough
-    function _safeTokenTransfer(IERC20 _token, address _to, uint256 _amount) internal {
-        uint256 balance = _token.balanceOf(address(this));
+    // Safe PACOCA transfer function, just in case if rounding error causes pool to not have enough
+    function _safePACOCATransfer(address _to, uint256 _amount) internal {
+        uint256 balance = _pacocaBalance();
 
         if (_amount > balance) {
-            _token.transfer(_to, balance);
+            PACOCA.transfer(_to, balance);
         } else {
-            _token.transfer(_to, _amount);
+            PACOCA.transfer(_to, _amount);
         }
     }
 
@@ -480,7 +472,7 @@ contract SweetVault_v2 is Ownable, ReentrancyGuard {
 
     function setPathToWbnb(address[] memory _path) external onlyOwner {
         require(
-            _path[0] == address(FARM_REWARD_TOKEN) && _path[_path.length - 1] == address(WBNB),
+            _path[0] == address(FARM_REWARD_TOKEN) && _path[_path.length - 1] == WBNB,
             "SweetVault: Incorrect path to WBNB"
         );
 
