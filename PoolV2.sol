@@ -104,9 +104,6 @@ contract PoolV2 is Ownable, ReentrancyGuard {
         transferOwnership(_admin);
     }
 
-    receive() external payable {
-    }
-
     /*
      * @notice Deposit staked tokens and collect reward tokens (if any)
      * @param _amount: amount to withdraw (in rewardToken)
