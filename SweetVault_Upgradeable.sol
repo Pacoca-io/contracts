@@ -19,11 +19,12 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 
-contract SweetVault is Ownable, ReentrancyGuard {
+contract SweetVault is Ownable, ReentrancyGuard, Initializable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -41,22 +42,22 @@ contract SweetVault is Ownable, ReentrancyGuard {
     // Addresses
     address constant public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     IERC20 constant public PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
-    IPacocaVault immutable public AUTO_PACOCA;
-    IERC20 immutable public STAKED_TOKEN;
+    IPacocaVault public AUTO_PACOCA;
+    IERC20 public STAKED_TOKEN;
 
     // Runtime data
     mapping(address => UserInfo) public userInfo; // Info of users
     uint256 public accSharesPerStakedToken; // Accumulated AUTO_PACOCA shares per staked token, times 1e18.
 
     // Farm info
-    IFarm immutable public STAKED_TOKEN_FARM;
-    IERC20 immutable public FARM_REWARD_TOKEN;
-    uint256 immutable public FARM_PID;
-    bool immutable public IS_CAKE_STAKING;
-    bool immutable public IS_BISWAP;
+    IFarm public STAKED_TOKEN_FARM;
+    IERC20 public FARM_REWARD_TOKEN;
+    uint256 public FARM_PID;
+    bool public IS_CAKE_STAKING;
+    bool public IS_BISWAP;
 
     // Settings
-    IPancakeRouter02 immutable public router;
+    IPancakeRouter02 public router;
     address[] public pathToPacoca; // Path from staked token to PACOCA
     address[] public pathToWbnb; // Path from staked token to WBNB
 
@@ -93,7 +94,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
     event SetPlatformFee(uint256 oldPlatformFee, uint256 newPlatformFee);
     event SetEarlyWithdrawFee(uint256 oldEarlyWithdrawFee, uint256 newEarlyWithdrawFee);
 
-    constructor(
+    function initialize(
         address _autoPacoca,
         address _stakedToken,
         address _stakedTokenFarm,
@@ -109,7 +110,7 @@ contract SweetVault is Ownable, ReentrancyGuard {
         address _platform,
         uint256 _buyBackRate,
         uint256 _platformFee
-    ) public {
+    ) public onlyOwner initializer {
         require(
             _pathToPacoca[0] == address(_farmRewardToken) && _pathToPacoca[_pathToPacoca.length - 1] == address(PACOCA),
             "SweetVault: Incorrect path to PACOCA"
