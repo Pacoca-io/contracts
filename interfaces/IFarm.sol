@@ -11,6 +11,7 @@ interface IFarm {
     function getMultiplier(uint256 _from, uint256 _to) external view returns (uint256);
 
     // View function to see pending CAKEs on frontend.
+    function pending(uint256 _pid, address _user) external view returns (uint256);
     function pendingCake(uint256 _pid, address _user) external view returns (uint256);
     function pendingBSW(uint256 _pid, address _user) external view returns (uint256);
     function pendingEarnings(uint256 _pid, address _user) external view returns (uint256);
