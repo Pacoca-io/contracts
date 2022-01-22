@@ -16,15 +16,15 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 
-contract SweetVault is Ownable, ReentrancyGuard, Initializable {
+contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -110,7 +110,7 @@ contract SweetVault is Ownable, ReentrancyGuard, Initializable {
         address _platform,
         uint256 _buyBackRate,
         uint256 _platformFee
-    ) public onlyOwner initializer {
+    ) public initializer {
         require(
             _pathToPacoca[0] == address(_farmRewardToken) && _pathToPacoca[_pathToPacoca.length - 1] == address(PACOCA),
             "SweetVault: Incorrect path to PACOCA"
@@ -139,7 +139,9 @@ contract SweetVault is Ownable, ReentrancyGuard, Initializable {
         buyBackRate = _buyBackRate;
         platformFee = _platformFee;
 
+        __Ownable_init();
         transferOwnership(_owner);
+
         treasury = _treasury;
         keeper = _keeper;
         platform = _platform;
