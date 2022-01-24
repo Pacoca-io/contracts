@@ -310,6 +310,15 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         }
     }
 
+    function addVaults(
+        address[] memory _vaults,
+        bool _legacy
+    ) public onlyModerator {
+        for (uint index = 0; index < _vaults.length; ++index) {
+            addVault(_vaults[index], _legacy);
+        }
+    }
+
     function enableVault(address _vault) external onlyModerator {
         vaultInfos[_vault].enabled = true;
     }
