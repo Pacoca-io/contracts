@@ -16,7 +16,8 @@
 
 pragma solidity ^0.6.12;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 interface ILegacyVault {
@@ -44,7 +45,7 @@ interface KeeperCompatibleInterface {
     ) external;
 }
 
-contract SweetKeeper is Ownable, KeeperCompatibleInterface {
+contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
     using SafeMath for uint;
 
     struct VaultInfo {
@@ -71,17 +72,20 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
 
     uint public maxDelay = 1 days;
     uint public minKeeperFee = 5500000000000000;
-    uint public slippageFactor = 9600; // 4%
+    uint public slippageFactor = 9500; // 5%
     uint16 public maxVaults = 3;
 
-    constructor(
+    event Compound(address indexed vault, uint timestamp);
+
+    function initialize(
         address _keeper,
         address _moderator,
         address _owner
-    ) public {
+    ) public initializer {
         keeper = _keeper;
         moderator = _moderator;
 
+        __Ownable_init();
         transferOwnership(_owner);
     }
 
@@ -230,13 +234,16 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
         uint[] memory _minPacocaOutputs
     ) private {
         uint legacyLength = _legacyVaults.length;
+        uint timestamp = block.timestamp;
 
         for (uint index = 0; index < legacyLength; ++index) {
             address vault = _legacyVaults[index];
 
             ILegacyVault(vault).earn();
 
-            vaultInfos[vault].lastCompound = block.timestamp;
+            vaultInfos[vault].lastCompound = timestamp;
+
+            emit Compound(vault, timestamp);
         }
 
         uint sweetLength = _sweetVaults.length;
@@ -251,7 +258,9 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
                 _minPacocaOutputs[index]
             );
 
-            vaultInfos[vault].lastCompound = block.timestamp;
+            vaultInfos[vault].lastCompound = timestamp;
+
+            emit Compound(vault, timestamp);
         }
     }
 
@@ -289,7 +298,7 @@ contract SweetKeeper is Ownable, KeeperCompatibleInterface {
         );
 
         vaultInfos[_vault] = VaultInfo(
-            block.timestamp - 6 hours,
+            block.timestamp,
             true
         );
 
