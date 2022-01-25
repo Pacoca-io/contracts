@@ -16,15 +16,16 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
+import "hardhat/console.sol";
 
-contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
+contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -40,8 +41,8 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
     }
 
     // Addresses
-    address public WBNB;
-    IERC20 public PACOCA;
+    address public constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    IERC20 public constant PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
     IPacocaVault public AUTO_PACOCA;
     IERC20 public STAKED_TOKEN;
 
@@ -64,19 +65,19 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
     address public treasury;
     address public keeper;
     uint256 public keeperFee;
-    uint256 public keeperFeeUL;
+    uint256 public constant keeperFeeUL = 100;
 
     address public platform;
     uint256 public platformFee;
-    uint256 public platformFeeUL;
+    uint256 public constant platformFeeUL = 500;
 
-    address public BURN_ADDRESS;
+    address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     uint256 public buyBackRate;
-    uint256 public buyBackRateUL;
+    uint256 public constant buyBackRateUL = 300;
 
     uint256 public earlyWithdrawFee;
-    uint256 public earlyWithdrawFeeUL;
-    uint256 public withdrawFeePeriod;
+    uint256 public constant earlyWithdrawFeeUL = 300;
+    uint256 public constant withdrawFeePeriod = 3 days;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
@@ -111,6 +112,9 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
         uint256 _buyBackRate,
         uint256 _platformFee
     ) public initializer {
+        keeperFee = 50;
+        earlyWithdrawFee = 100;
+
         require(
             _pathToPacoca[0] == address(_farmRewardToken) && _pathToPacoca[_pathToPacoca.length - 1] == address(PACOCA),
             "SweetVault: Incorrect path to PACOCA"
@@ -121,8 +125,8 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
             "SweetVault: Incorrect path to WBNB"
         );
 
-        require(_buyBackRate <= buyBackRateUL);
-        require(_platformFee <= platformFeeUL);
+        require(_buyBackRate <= buyBackRateUL, "SweetVault: Buyback rate above limit");
+        require(_platformFee <= platformFeeUL, "SweetVault: Platform fee above limit");
 
         AUTO_PACOCA = IPacocaVault(_autoPacoca);
         STAKED_TOKEN = IERC20(_stakedToken);
@@ -139,26 +143,13 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
         buyBackRate = _buyBackRate;
         platformFee = _platformFee;
 
+        __ReentrancyGuard_init();
         __Ownable_init();
         transferOwnership(_owner);
 
         treasury = _treasury;
         keeper = _keeper;
         platform = _platform;
-
-        WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-        PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
-        BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
-
-        keeperFee = 50;
-        earlyWithdrawFee = 100;
-
-        keeperFeeUL = 100;
-        platformFeeUL = 500;
-        buyBackRateUL = 300;
-        earlyWithdrawFeeUL = 300;
-
-        withdrawFeePeriod = 3 days;
     }
 
     /**
