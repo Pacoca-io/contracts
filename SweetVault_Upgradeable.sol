@@ -40,8 +40,8 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
     }
 
     // Addresses
-    address constant public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    IERC20 constant public PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
+    address public WBNB;
+    IERC20 public PACOCA;
     IPacocaVault public AUTO_PACOCA;
     IERC20 public STAKED_TOKEN;
 
@@ -63,20 +63,20 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
 
     address public treasury;
     address public keeper;
-    uint256 public keeperFee = 50; // 0.5%
-    uint256 public constant keeperFeeUL = 100; // 1%
+    uint256 public keeperFee;
+    uint256 public keeperFeeUL;
 
     address public platform;
     uint256 public platformFee;
-    uint256 public constant platformFeeUL = 500; // 5%
+    uint256 public platformFeeUL;
 
-    address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+    address public BURN_ADDRESS;
     uint256 public buyBackRate;
-    uint256 public constant buyBackRateUL = 300; // 5%
+    uint256 public buyBackRateUL;
 
-    uint256 public earlyWithdrawFee = 100; // 1%
-    uint256 public constant earlyWithdrawFeeUL = 300; // 3%
-    uint256 public constant withdrawFeePeriod = 3 days;
+    uint256 public earlyWithdrawFee;
+    uint256 public earlyWithdrawFeeUL;
+    uint256 public withdrawFeePeriod;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
@@ -145,6 +145,20 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuard {
         treasury = _treasury;
         keeper = _keeper;
         platform = _platform;
+
+        WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+        PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
+        BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+
+        keeperFee = 50;
+        earlyWithdrawFee = 100;
+
+        keeperFeeUL = 100;
+        platformFeeUL = 500;
+        buyBackRateUL = 300;
+        earlyWithdrawFeeUL = 300;
+
+        withdrawFeePeriod = 3 days;
     }
 
     /**
