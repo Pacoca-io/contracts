@@ -316,6 +316,10 @@ contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuardUpgradeabl
 
         uint256 rewards = _rewardTokenBalance().add(pending);
 
+        if (rewards == 0) {
+            return 0;
+        }
+
         uint256[] memory amounts = router.getAmountsOut(rewards, _path);
 
         return amounts[amounts.length.sub(1)];
