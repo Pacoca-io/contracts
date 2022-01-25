@@ -70,10 +70,10 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
     address public keeper;
     address public moderator;
 
-    uint public maxDelay = 1 days;
-    uint public minKeeperFee = 5500000000000000;
-    uint public slippageFactor = 9500; // 5%
-    uint16 public maxVaults = 3;
+    uint public maxDelay;
+    uint public minKeeperFee;
+    uint public slippageFactor;
+    uint16 public maxVaults;
 
     event Compound(address indexed vault, uint timestamp);
 
@@ -87,6 +87,11 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
         __Ownable_init();
         transferOwnership(_owner);
+
+        maxDelay = 1 days;
+        minKeeperFee = 10000000000000000;
+        slippageFactor = 9500; // 5%
+        maxVaults = 2;
     }
 
     modifier onlyKeeper() {
