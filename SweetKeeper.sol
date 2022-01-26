@@ -141,8 +141,8 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bool upkeepNeeded,
         bytes memory performData
     ) {
-        uint256 totalLength = vaults[VaultType.LEGACY].length;
-        uint256 actualLength = 0;
+        uint totalLength = vaults[VaultType.LEGACY].length;
+        uint actualLength = 0;
 
         CompoundInfo memory tempCompoundInfo = CompoundInfo(
             VaultType.LEGACY,
@@ -196,8 +196,8 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bool upkeepNeeded,
         bytes memory performData
     ) {
-        uint256 totalLength = vaults[VaultType.SWEET].length;
-        uint256 actualLength = 0;
+        uint totalLength = vaults[VaultType.SWEET].length;
+        uint actualLength = 0;
 
         CompoundInfo memory tempCompoundInfo = CompoundInfo(
             VaultType.SWEET,
@@ -276,8 +276,8 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bool upkeepNeeded,
         bytes memory performData
     ) {
-        uint256 totalLength = vaults[VaultType.SWEET_V2].length;
-        uint256 actualLength = 0;
+        uint totalLength = vaults[VaultType.SWEET_V2].length;
+        uint actualLength = 0;
 
         CompoundInfo memory tempCompoundInfo = CompoundInfo(
             VaultType.SWEET_V2,
