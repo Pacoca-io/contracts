@@ -63,6 +63,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
     }
 
     struct VaultInfo {
+        VaultType vaultType;
         uint lastCompound;
         bool enabled;
     }
@@ -369,6 +370,72 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         );
     }
 
+    function compound(address _vault) public {
+        VaultInfo memory vaultInfo = vaultInfos[_vault];
+        uint timestamp = block.timestamp;
+
+        require(
+            vaultInfo.lastCompound < timestamp - 12 hours,
+            "SweetKeeper::compound: Too soon"
+        );
+
+        if (vaultInfo.vaultType == VaultType.LEGACY) {
+            return _compoundLegacyVault(_vault, timestamp);
+        }
+
+        if (vaultInfo.vaultType == VaultType.SWEET) {
+            return _compoundSweetVault(_vault, 0, 0, 0, 0, timestamp);
+        }
+
+        if (vaultInfo.vaultType == VaultType.SWEET_V2) {
+            return _compoundSweetVaultV2(_vault, 0, 0, timestamp);
+        }
+    }
+
+    function _compoundLegacyVault(address _vault, uint timestamp) private {
+        ILegacyVault(_vault).earn();
+
+        vaultInfos[_vault].lastCompound = timestamp;
+
+        emit Compound(_vault, timestamp);
+    }
+
+    function _compoundSweetVault(
+        address _vault,
+        uint _minPlatformOutput,
+        uint _minKeeperOutput,
+        uint _minBurnOutput,
+        uint _minPacocaOutput,
+        uint timestamp
+    ) private {
+        ISweetVault(_vault).earn(
+            _minPlatformOutput,
+            _minKeeperOutput,
+            _minBurnOutput,
+            _minPacocaOutput
+        );
+
+        vaultInfos[_vault].lastCompound = timestamp;
+
+        emit Compound(_vault, timestamp);
+    }
+
+    function _compoundSweetVaultV2(
+        address _vault,
+        uint _minPlatformOutput,
+        uint _minPacocaOutput,
+        uint timestamp
+    ) private {
+        ISweetVaultV2(_vault).earn(
+            _minPlatformOutput,
+            _minPacocaOutput
+        );
+
+        vaultInfos[_vault].lastCompound = timestamp;
+
+        emit Compound(_vault, timestamp);
+    }
+
     function _earn(
         VaultType _type,
         address[] memory _vaults,
@@ -382,13 +449,10 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
         if (_type == VaultType.LEGACY) {
             for (uint index = 0; index < length; ++index) {
-                address vault = _vaults[index];
-
-                ILegacyVault(vault).earn();
-
-                vaultInfos[vault].lastCompound = timestamp;
-
-                emit Compound(vault, timestamp);
+                _compoundLegacyVault(
+                    _vaults[index],
+                    timestamp
+                );
             }
 
             return;
@@ -396,18 +460,14 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
         if (_type == VaultType.SWEET) {
             for (uint index = 0; index < length; ++index) {
-                address vault = _vaults[index];
-
-                ISweetVault(vault).earn(
+                _compoundSweetVault(
+                    _vaults[index],
                     _minPlatformOutputs[index],
                     _minKeeperOutputs[index],
                     _minBurnOutputs[index],
-                    _minPacocaOutputs[index]
+                    _minPacocaOutputs[index],
+                    timestamp
                 );
-
-                vaultInfos[vault].lastCompound = timestamp;
-
-                emit Compound(vault, timestamp);
             }
 
             return;
@@ -415,16 +475,12 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
         if (_type == VaultType.SWEET_V2) {
             for (uint index = 0; index < length; ++index) {
-                address vault = _vaults[index];
-
-                ISweetVaultV2(vault).earn(
+                _compoundSweetVaultV2(
+                    _vaults[index],
                     _minPlatformOutputs[index],
-                    _minPacocaOutputs[index]
+                    _minPacocaOutputs[index],
+                    timestamp
                 );
-
-                vaultInfos[vault].lastCompound = timestamp;
-
-                emit Compound(vault, timestamp);
             }
         }
     }
@@ -480,6 +536,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         );
 
         vaultInfos[_vault] = VaultInfo(
+            _type,
             block.timestamp,
             true
         );
