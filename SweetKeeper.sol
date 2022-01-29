@@ -135,6 +135,12 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
             return (upkeepNeeded, performData);
         }
 
+        (upkeepNeeded, performData) = checkSweetV2Compound();
+
+        if (upkeepNeeded) {
+            return (upkeepNeeded, performData);
+        }
+
         return (false, "");
     }
 
@@ -317,28 +323,23 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         }
 
         if (actualLength > 0) {
-            CompoundInfo memory compoundInfo = CompoundInfo(
-                VaultType.SWEET_V2,
-                new address[](actualLength),
-                new uint[](actualLength),
-                new uint[](0),
-                new uint[](0),
-                new uint[](actualLength)
-            );
+            address[] memory vaultsToCompound = new address[](actualLength);
+            uint[] memory minPlatformOutputs = new uint[](actualLength);
+            uint[] memory minPacocaOutputs = new uint[](actualLength);
 
             for (uint16 index = 0; index < actualLength; ++index) {
-                compoundInfo.vaults[index] = tempCompoundInfo.vaults[index];
-                compoundInfo.minPlatformOutputs[index] = tempCompoundInfo.minPlatformOutputs[index];
-                compoundInfo.minPacocaOutputs[index] = tempCompoundInfo.minPacocaOutputs[index];
+                vaultsToCompound[index] = tempCompoundInfo.vaults[index];
+                minPlatformOutputs[index] = tempCompoundInfo.minPlatformOutputs[index];
+                minPacocaOutputs[index] = tempCompoundInfo.minPacocaOutputs[index];
             }
 
             return (true, abi.encode(
-                compoundInfo.vaultType,
-                compoundInfo.vaults,
-                compoundInfo.minPlatformOutputs,
-                compoundInfo.minKeeperOutputs,
-                compoundInfo.minBurnOutputs,
-                compoundInfo.minPacocaOutputs
+                VaultType.SWEET_V2,
+                vaultsToCompound,
+                minPlatformOutputs,
+                new uint[](0),
+                new uint[](0),
+                minPacocaOutputs
             ));
         }
 
