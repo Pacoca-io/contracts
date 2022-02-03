@@ -11,6 +11,17 @@ contract PeanutZap is Ownable {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
+    struct Tokens {
+        address token0;
+        address token1;
+    }
+
+    struct InitialBalances {
+        uint token0;
+        uint token1;
+        uint inputToken;
+    }
+
     address public treasury;
 
     constructor (address _treasury, address _owner) public {
@@ -22,41 +33,35 @@ contract PeanutZap is Ownable {
         IPancakeRouter02 _router,
         address[] calldata _pathToToken0,
         address[] calldata _pathToToken1,
-        IERC20 _inputToken,
+        address _inputToken,
         IPancakePair _outputToken,
         uint _inputTokenAmount,
         uint _minToken0,
         uint _minToken1
     ) public {
-        uint initialBalanceToken0 = _getBalance(_outputToken.token0());
-        uint initialBalanceToken1 = _getBalance(_outputToken.token1());
-        uint swapInputAmount = _inputTokenAmount.div(2);
+        Tokens memory tokens = _getTokens(_outputToken);
 
-        _inputToken.transferFrom(msg.sender, address(this), _inputTokenAmount);
+        InitialBalances memory initialBalances = InitialBalances(
+            _getBalance(tokens.token0),
+            _getBalance(tokens.token1),
+            _getBalance(_inputToken)
+        );
 
-        if (address(_inputToken) != _outputToken.token0())
-            _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                swapInputAmount,
-                _minToken0,
-                _pathToToken0,
-                address(this),
-                block.timestamp
-            );
+        IERC20(_inputToken).transferFrom(msg.sender, address(this), _inputTokenAmount);
 
-        if (address(_inputToken) != _outputToken.token1())
-            _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                swapInputAmount,
-                _minToken1,
-                _pathToToken1,
-                address(this),
-                block.timestamp
-            );
+        uint swapInputAmount = _getBalance(_inputToken).sub(initialBalances.inputToken).div(2);
+
+        if (_inputToken != tokens.token0)
+            _swap(_router, swapInputAmount, _minToken0, _pathToToken0);
+
+        if (_inputToken != tokens.token1)
+            _swap(_router, swapInputAmount, _minToken1, _pathToToken1);
 
         _router.addLiquidity(
-            _outputToken.token0(),
-            _outputToken.token1(),
-            _getBalance(_outputToken.token0()).sub(initialBalanceToken0),
-            _getBalance(_outputToken.token1()).sub(initialBalanceToken1),
+            tokens.token0,
+            tokens.token1,
+            _getBalance(tokens.token0).sub(initialBalances.token0),
+            _getBalance(tokens.token1).sub(initialBalances.token1),
             _minToken0,
             _minToken1,
             msg.sender,
@@ -64,17 +69,107 @@ contract PeanutZap is Ownable {
         );
     }
 
-    function zapETH(
+    function unZapToken(
         IPancakeRouter02 _router,
-        address[] calldata _pathToToken0,
-        address[] calldata _pathToToken1,
-        IERC20 _inputToken,
-        IPancakePair _outputToken,
+        address[] calldata _pathFromToken0,
+        address[] calldata _pathFromToken1,
+        IPancakePair _inputToken,
+        address _outputToken,
         uint _inputTokenAmount,
-        uint _minToken0,
-        uint _minToken1
+        uint _minOutputToken0,
+        uint _minOutputToken1
     ) public {
+        Tokens memory tokens = _getTokens(_inputToken);
 
+        InitialBalances memory initialBalances = InitialBalances(
+            _getBalance(tokens.token0),
+            _getBalance(tokens.token1),
+            _inputToken.balanceOf(address(this))
+        );
+
+        uint initialOutputTokenBalance = _getBalance(_outputToken);
+
+        _inputToken.transferFrom(msg.sender, address(this), _inputTokenAmount);
+
+        // TODO support fee on transfer tokens
+        _router.removeLiquidity(
+            tokens.token0,
+            tokens.token1,
+            _inputToken.balanceOf(address(this)).sub(initialBalances.inputToken),
+            0, // TODO maybe care about output amounts
+            0, // TODO maybe care about output amounts
+            address(this),
+            block.timestamp
+        );
+
+        if (_outputToken != tokens.token0)
+            _swapTo(
+                _router,
+                _getBalance(tokens.token0).sub(initialBalances.token0),
+                _minOutputToken0,
+                _pathFromToken0,
+                msg.sender
+            );
+
+        if (_outputToken != tokens.token1)
+            _swapTo(
+                _router,
+                _getBalance(tokens.token1).sub(initialBalances.token1),
+                _minOutputToken1,
+                _pathFromToken1,
+                msg.sender
+            );
+
+        uint finalOutputTokenBalance = _getBalance(_outputToken);
+
+        if (finalOutputTokenBalance != initialOutputTokenBalance)
+            IERC20(_outputToken).transferFrom(
+                address(this),
+                msg.sender,
+                finalOutputTokenBalance.sub(initialOutputTokenBalance)
+            );
+    }
+
+    function _getTokens(
+        IPancakePair _lp
+    ) private view returns (
+        Tokens memory tokens
+    ) {
+        return Tokens(
+            _lp.token0(),
+            _lp.token1()
+        );
+    }
+
+    function _swap(
+        IPancakeRouter02 _router,
+        uint _amountIn,
+        uint _amountOutMin,
+        address[] memory _path
+    ) private {
+        _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _amountIn,
+            _amountOutMin,
+            _path,
+            address(this),
+            block.timestamp
+        );
+    }
+
+    function _swapTo(
+        IPancakeRouter02 _router,
+        uint _amountIn,
+        uint _amountOutMin,
+        address[] memory _path,
+        address _to
+    ) private {
+        _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _amountIn,
+            _amountOutMin,
+            _path,
+            _to,
+            block.timestamp
+        );
     }
 
     function _getBalance(address _token) private view returns (uint) {
