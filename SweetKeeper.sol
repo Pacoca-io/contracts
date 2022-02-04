@@ -148,7 +148,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bool upkeepNeeded,
         bytes memory performData
     ) {
-        uint totalLength = vaults[VaultType.LEGACY].length;
+        uint totalLength = legacyVaultsLength();
         uint actualLength = 0;
 
         CompoundInfo memory tempCompoundInfo = CompoundInfo(
@@ -203,7 +203,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bool upkeepNeeded,
         bytes memory performData
     ) {
-        uint totalLength = vaults[VaultType.SWEET].length;
+        uint totalLength = sweetVaultsLength();
         uint actualLength = 0;
 
         CompoundInfo memory tempCompoundInfo = CompoundInfo(
@@ -283,7 +283,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bool upkeepNeeded,
         bytes memory performData
     ) {
-        uint totalLength = vaults[VaultType.SWEET_V2].length;
+        uint totalLength = sweetVaultsV2Length();
         uint actualLength = 0;
 
         CompoundInfo memory tempCompoundInfo = CompoundInfo(
@@ -518,15 +518,15 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         return (0, 0, 0, 0);
     }
 
-    function legacyVaultsLength() external view returns (uint) {
+    function legacyVaultsLength() public view returns (uint) {
         return vaults[VaultType.LEGACY].length;
     }
 
-    function sweetVaultsLength() external view returns (uint) {
+    function sweetVaultsLength() public view returns (uint) {
         return vaults[VaultType.SWEET].length;
     }
 
-    function sweetVaultsV2Length() external view returns (uint) {
+    function sweetVaultsV2Length() public view returns (uint) {
         return vaults[VaultType.SWEET_V2].length;
     }
 
