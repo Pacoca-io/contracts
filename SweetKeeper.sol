@@ -144,6 +144,62 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         return (false, "");
     }
 
+    function checkCompound(
+        address _vault
+    ) public view returns (
+        bool compoundNeeded,
+        uint platformOutput,
+        uint keeperOutput,
+        uint burnOutput,
+        uint pacocaOutput
+    ) {
+        compoundNeeded = false;
+        platformOutput = 0;
+        keeperOutput = 0;
+        burnOutput = 0;
+        pacocaOutput = 0;
+
+        VaultInfo memory vaultInfo = vaultInfos[_vault];
+
+        if (!vaultInfo.enabled)
+            return (compoundNeeded, platformOutput, keeperOutput, burnOutput, pacocaOutput);
+
+        if (vaultInfo.vaultType == VaultType.SWEET || vaultInfo.vaultType == VaultType.SWEET_V2)
+            if (ISweetVault(_vault).totalStake() == 0)
+                return (compoundNeeded, platformOutput, keeperOutput, burnOutput, pacocaOutput);
+
+        compoundNeeded = block.timestamp >= vaultInfo.lastCompound + maxDelay;
+
+        if (vaultInfo.vaultType == VaultType.LEGACY)
+            return (compoundNeeded, platformOutput, keeperOutput, burnOutput, pacocaOutput);
+
+        if (vaultInfo.vaultType == VaultType.SWEET) {
+            (platformOutput, keeperOutput, burnOutput, pacocaOutput) = _getExpectedOutputs(
+                VaultType.SWEET,
+                _vault
+            );
+
+            if (keeperOutput >= minKeeperFee)
+                compoundNeeded = true;
+
+            return (compoundNeeded, platformOutput, keeperOutput, burnOutput, pacocaOutput);
+        }
+
+        if (vaultInfo.vaultType == VaultType.SWEET_V2) {
+            (platformOutput, , , pacocaOutput) = _getExpectedOutputs(
+                VaultType.SWEET_V2,
+                _vault
+            );
+
+            keeperOutput = platformOutput.div(11);
+
+            if (keeperOutput >= minKeeperFee)
+                compoundNeeded = true;
+
+            return (compoundNeeded, platformOutput, keeperOutput, burnOutput, pacocaOutput);
+        }
+    }
+
     function checkLegacyCompound() public view returns (
         bool upkeepNeeded,
         bytes memory performData
@@ -166,13 +222,10 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
             }
 
             address vault = vaults[VaultType.LEGACY][index];
-            VaultInfo memory vaultInfo = vaultInfos[vault];
 
-            if (!vaultInfo.enabled) {
-                continue;
-            }
+            (bool compoundNeeded, , , ,) = checkCompound(vault);
 
-            if (block.timestamp >= vaultInfo.lastCompound + maxDelay) {
+            if (compoundNeeded) {
                 tempCompoundInfo.vaults[actualLength] = vault;
 
                 actualLength = actualLength + 1;
@@ -221,23 +274,10 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
             }
 
             address vault = vaults[VaultType.SWEET][index];
-            VaultInfo memory vaultInfo = vaultInfos[vault];
 
-            if (!vaultInfo.enabled || ISweetVault(vault).totalStake() == 0) {
-                continue;
-            }
+            (bool compoundNeeded, uint platformOutput, uint keeperOutput, uint burnOutput, uint pacocaOutput) = checkCompound(vault);
 
-            (
-            uint platformOutput,
-            uint keeperOutput,
-            uint burnOutput,
-            uint pacocaOutput
-            ) = _getExpectedOutputs(VaultType.SWEET, vault);
-
-            if (
-                block.timestamp >= vaultInfo.lastCompound + maxDelay
-                || keeperOutput >= minKeeperFee
-            ) {
+            if (compoundNeeded) {
                 tempCompoundInfo.vaults[actualLength] = vault;
                 tempCompoundInfo.minPlatformOutputs[actualLength] = platformOutput.mul(slippageFactor).div(10000);
                 tempCompoundInfo.minKeeperOutputs[actualLength] = keeperOutput.mul(slippageFactor).div(10000);
@@ -301,20 +341,11 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
             }
 
             address vault = vaults[VaultType.SWEET_V2][index];
-            VaultInfo memory vaultInfo = vaultInfos[vault];
 
-            if (!vaultInfo.enabled || ISweetVault(vault).totalStake() == 0) {
-                continue;
-            }
+            (bool compoundNeeded, uint platformOutput, , , uint pacocaOutput) = checkCompound(vault);
 
-            (uint platformOutput, , , uint pacocaOutput) = _getExpectedOutputs(VaultType.SWEET_V2, vault);
-
-            if (
-                block.timestamp >= vaultInfo.lastCompound + maxDelay
-                || platformOutput.div(11) >= minKeeperFee // 11 is the ratio of keeper fees compared to all fees
-            ) {
+            if (compoundNeeded) {
                 tempCompoundInfo.vaults[actualLength] = vault;
-
                 tempCompoundInfo.minPlatformOutputs[actualLength] = platformOutput.mul(slippageFactor).div(10000);
                 tempCompoundInfo.minPacocaOutputs[actualLength] = pacocaOutput.mul(slippageFactor).div(10000);
 
