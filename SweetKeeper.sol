@@ -68,6 +68,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bool enabled;
     }
 
+    // @Deprecated CompoundInfo
     struct CompoundInfo {
         VaultType vaultType;
         address[] vaults;
@@ -86,6 +87,8 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
     uint public maxDelay;
     uint public minKeeperFee;
     uint public slippageFactor;
+
+    // @Deprecated maxVaults
     uint16 public maxVaults;
 
     event Compound(address indexed vault, uint timestamp);
@@ -205,48 +208,22 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bytes memory performData
     ) {
         uint totalLength = legacyVaultsLength();
-        uint actualLength = 0;
-
-        CompoundInfo memory tempCompoundInfo = CompoundInfo(
-            VaultType.LEGACY,
-            new address[](totalLength),
-            new uint[](0),
-            new uint[](0),
-            new uint[](0),
-            new uint[](0)
-        );
 
         for (uint16 index = 0; index < totalLength; ++index) {
-            if (maxVaults == actualLength) {
-                continue;
-            }
-
             address vault = vaults[VaultType.LEGACY][index];
 
             (bool compoundNeeded, , , ,) = checkCompound(vault);
 
             if (compoundNeeded) {
-                tempCompoundInfo.vaults[actualLength] = vault;
-
-                actualLength = actualLength + 1;
+                return (true, abi.encode(
+                    VaultType.LEGACY,
+                    vault,
+                    0,
+                    0,
+                    0,
+                    0
+                ));
             }
-        }
-
-        if (actualLength > 0) {
-            address[] memory vaultsToCompound = new address[](actualLength);
-
-            for (uint16 index = 0; index < actualLength; ++index) {
-                vaultsToCompound[index] = tempCompoundInfo.vaults[index];
-            }
-
-            return (true, abi.encode(
-                VaultType.LEGACY,
-                vaultsToCompound,
-                new uint[](0),
-                new uint[](0),
-                new uint[](0),
-                new uint[](0)
-            ));
         }
 
         return (false, "");
@@ -257,63 +234,22 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bytes memory performData
     ) {
         uint totalLength = sweetVaultsLength();
-        uint actualLength = 0;
-
-        CompoundInfo memory tempCompoundInfo = CompoundInfo(
-            VaultType.SWEET,
-            new address[](totalLength),
-            new uint[](totalLength),
-            new uint[](totalLength),
-            new uint[](totalLength),
-            new uint[](totalLength)
-        );
 
         for (uint16 index = 0; index < totalLength; ++index) {
-            if (maxVaults == actualLength) {
-                continue;
-            }
-
             address vault = vaults[VaultType.SWEET][index];
 
             (bool compoundNeeded, uint platformOutput, uint keeperOutput, uint burnOutput, uint pacocaOutput) = checkCompound(vault);
 
             if (compoundNeeded) {
-                tempCompoundInfo.vaults[actualLength] = vault;
-                tempCompoundInfo.minPlatformOutputs[actualLength] = platformOutput.mul(slippageFactor).div(10000);
-                tempCompoundInfo.minKeeperOutputs[actualLength] = keeperOutput.mul(slippageFactor).div(10000);
-                tempCompoundInfo.minBurnOutputs[actualLength] = burnOutput.mul(slippageFactor).div(10000);
-                tempCompoundInfo.minPacocaOutputs[actualLength] = pacocaOutput.mul(slippageFactor).div(10000);
-
-                actualLength = actualLength + 1;
+                return (true, abi.encode(
+                    VaultType.SWEET,
+                    vault,
+                    platformOutput.mul(slippageFactor).div(10000),
+                    keeperOutput.mul(slippageFactor).div(10000),
+                    burnOutput.mul(slippageFactor).div(10000),
+                    pacocaOutput.mul(slippageFactor).div(10000)
+                ));
             }
-        }
-
-        if (actualLength > 0) {
-            CompoundInfo memory compoundInfo = CompoundInfo(
-                VaultType.SWEET,
-                new address[](actualLength),
-                new uint[](actualLength),
-                new uint[](actualLength),
-                new uint[](actualLength),
-                new uint[](actualLength)
-            );
-
-            for (uint16 index = 0; index < actualLength; ++index) {
-                compoundInfo.vaults[index] = tempCompoundInfo.vaults[index];
-                compoundInfo.minPlatformOutputs[index] = tempCompoundInfo.minPlatformOutputs[index];
-                compoundInfo.minKeeperOutputs[index] = tempCompoundInfo.minKeeperOutputs[index];
-                compoundInfo.minBurnOutputs[index] = tempCompoundInfo.minBurnOutputs[index];
-                compoundInfo.minPacocaOutputs[index] = tempCompoundInfo.minPacocaOutputs[index];
-            }
-
-            return (true, abi.encode(
-                compoundInfo.vaultType,
-                compoundInfo.vaults,
-                compoundInfo.minPlatformOutputs,
-                compoundInfo.minKeeperOutputs,
-                compoundInfo.minBurnOutputs,
-                compoundInfo.minPacocaOutputs
-            ));
         }
 
         return (false, "");
@@ -324,54 +260,22 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         bytes memory performData
     ) {
         uint totalLength = sweetVaultsV2Length();
-        uint actualLength = 0;
-
-        CompoundInfo memory tempCompoundInfo = CompoundInfo(
-            VaultType.SWEET_V2,
-            new address[](totalLength),
-            new uint[](totalLength),
-            new uint[](0),
-            new uint[](0),
-            new uint[](totalLength)
-        );
 
         for (uint16 index = 0; index < totalLength; ++index) {
-            if (maxVaults == actualLength) {
-                continue;
-            }
-
             address vault = vaults[VaultType.SWEET_V2][index];
 
             (bool compoundNeeded, uint platformOutput, , , uint pacocaOutput) = checkCompound(vault);
 
             if (compoundNeeded) {
-                tempCompoundInfo.vaults[actualLength] = vault;
-                tempCompoundInfo.minPlatformOutputs[actualLength] = platformOutput.mul(slippageFactor).div(10000);
-                tempCompoundInfo.minPacocaOutputs[actualLength] = pacocaOutput.mul(slippageFactor).div(10000);
-
-                actualLength = actualLength + 1;
+                return (true, abi.encode(
+                    VaultType.SWEET_V2,
+                    vault,
+                    platformOutput.mul(slippageFactor).div(10000),
+                    0,
+                    0,
+                    pacocaOutput.mul(slippageFactor).div(10000)
+                ));
             }
-        }
-
-        if (actualLength > 0) {
-            address[] memory vaultsToCompound = new address[](actualLength);
-            uint[] memory minPlatformOutputs = new uint[](actualLength);
-            uint[] memory minPacocaOutputs = new uint[](actualLength);
-
-            for (uint16 index = 0; index < actualLength; ++index) {
-                vaultsToCompound[index] = tempCompoundInfo.vaults[index];
-                minPlatformOutputs[index] = tempCompoundInfo.minPlatformOutputs[index];
-                minPacocaOutputs[index] = tempCompoundInfo.minPacocaOutputs[index];
-            }
-
-            return (true, abi.encode(
-                VaultType.SWEET_V2,
-                vaultsToCompound,
-                minPlatformOutputs,
-                new uint[](0),
-                new uint[](0),
-                minPacocaOutputs
-            ));
         }
 
         return (false, "");
@@ -382,23 +286,23 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
     ) external override onlyKeeper {
         (
         VaultType _type,
-        address[] memory _vaults,
-        uint[] memory _minPlatformOutputs,
-        uint[] memory _minKeeperOutputs,
-        uint[] memory _minBurnOutputs,
-        uint[] memory _minPacocaOutputs
+        address _vault,
+        uint _minPlatformOutput,
+        uint _minKeeperOutput,
+        uint _minBurnOutput,
+        uint _minPacocaOutput
         ) = abi.decode(
             performData,
-            (VaultType, address[], uint[], uint[], uint[], uint[])
+            (VaultType, address, uint, uint, uint, uint)
         );
 
         _earn(
             _type,
-            _vaults,
-            _minPlatformOutputs,
-            _minKeeperOutputs,
-            _minBurnOutputs,
-            _minPacocaOutputs
+            _vault,
+            _minPlatformOutput,
+            _minKeeperOutput,
+            _minBurnOutput,
+            _minPacocaOutput
         );
     }
 
@@ -470,50 +374,43 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
     function _earn(
         VaultType _type,
-        address[] memory _vaults,
-        uint[] memory _minPlatformOutputs,
-        uint[] memory _minKeeperOutputs,
-        uint[] memory _minBurnOutputs,
-        uint[] memory _minPacocaOutputs
+        address _vault,
+        uint _minPlatformOutput,
+        uint _minKeeperOutput,
+        uint _minBurnOutput,
+        uint _minPacocaOutput
     ) private {
         uint timestamp = block.timestamp;
-        uint length = _vaults.length;
 
         if (_type == VaultType.LEGACY) {
-            for (uint index = 0; index < length; ++index) {
-                _compoundLegacyVault(
-                    _vaults[index],
-                    timestamp
-                );
-            }
+            _compoundLegacyVault(
+                _vault,
+                timestamp
+            );
 
             return;
         }
 
         if (_type == VaultType.SWEET) {
-            for (uint index = 0; index < length; ++index) {
-                _compoundSweetVault(
-                    _vaults[index],
-                    _minPlatformOutputs[index],
-                    _minKeeperOutputs[index],
-                    _minBurnOutputs[index],
-                    _minPacocaOutputs[index],
-                    timestamp
-                );
-            }
+            _compoundSweetVault(
+                _vault,
+                _minPlatformOutput,
+                _minKeeperOutput,
+                _minBurnOutput,
+                _minPacocaOutput,
+                timestamp
+            );
 
             return;
         }
 
         if (_type == VaultType.SWEET_V2) {
-            for (uint index = 0; index < length; ++index) {
-                _compoundSweetVaultV2(
-                    _vaults[index],
-                    _minPlatformOutputs[index],
-                    _minPacocaOutputs[index],
-                    timestamp
-                );
-            }
+            _compoundSweetVaultV2(
+                _vault,
+                _minPlatformOutput,
+                _minPacocaOutput,
+                timestamp
+            );
         }
     }
 
@@ -613,6 +510,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         slippageFactor = _slippageFactor;
     }
 
+    // @Deprecated setMaxVaults
     function setMaxVaults(uint16 _maxVaults) public onlyOwner {
         maxVaults = _maxVaults;
     }
