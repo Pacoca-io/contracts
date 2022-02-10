@@ -215,13 +215,15 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
             (bool compoundNeeded, , , ,) = checkCompound(vault);
 
             if (compoundNeeded) {
+                uint zero = uint(0);
+
                 return (true, abi.encode(
                     VaultType.LEGACY,
                     vault,
-                    0,
-                    0,
-                    0,
-                    0
+                    zero,
+                    zero,
+                    zero,
+                    zero
                 ));
             }
         }
@@ -267,12 +269,14 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
             (bool compoundNeeded, uint platformOutput, , , uint pacocaOutput) = checkCompound(vault);
 
             if (compoundNeeded) {
+                uint zero = uint(0);
+
                 return (true, abi.encode(
                     VaultType.SWEET_V2,
                     vault,
                     platformOutput.mul(slippageFactor).div(10000),
-                    0,
-                    0,
+                    zero,
+                    zero,
                     pacocaOutput.mul(slippageFactor).div(10000)
                 ));
             }
