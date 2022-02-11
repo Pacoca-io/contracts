@@ -81,7 +81,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
     mapping(VaultType => address[]) public vaults;
     mapping(address => VaultInfo) public vaultInfos;
 
-    address public keeper;
+    mapping(address => bool) public keepers;
     address public moderator;
 
     uint public maxDelay;
@@ -90,15 +90,15 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
     // @Deprecated maxVaults
     uint16 public maxVaults;
+    // @Deprecated keeper
+    address public keeper;
 
     event Compound(address indexed vault, uint timestamp);
 
     function initialize(
-        address _keeper,
         address _moderator,
         address _owner
     ) public initializer {
-        keeper = _keeper;
         moderator = _moderator;
 
         __Ownable_init();
@@ -111,7 +111,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
     }
 
     modifier onlyKeeper() {
-        require(msg.sender == keeper, "SweetKeeper::onlyKeeper: Not keeper");
+        require(keepers[msg.sender], "SweetKeeper::onlyKeeper: Not keeper");
         _;
     }
 
@@ -450,6 +450,39 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         return (0, 0, 0, 0);
     }
 
+    function compoundInfo(
+        address _vault
+    ) external view returns (
+        uint lastCompound,
+        uint keeperFee
+    ) {
+        VaultInfo memory vaultInfo = vaultInfos[_vault];
+        bool isSweet = vaultInfo.vaultType == VaultType.SWEET;
+        bool isSweetV2 = vaultInfo.vaultType == VaultType.SWEET_V2;
+
+        lastCompound = vaultInfo.lastCompound;
+        keeperFee = 0;
+
+        if ((isSweet || isSweetV2) && ISweetVault(_vault).totalStake() == 0) {
+            return (lastCompound, keeperFee);
+        }
+
+        if (isSweet) {
+            (, keeperFee,,) = _getExpectedOutputs(
+                VaultType.SWEET,
+                _vault
+            );
+        }
+        else if (isSweetV2) {
+            (uint platformOutput,,,) = _getExpectedOutputs(
+                VaultType.SWEET_V2,
+                _vault
+            );
+
+            keeperFee = platformOutput.div(11);
+        }
+    }
+
     function legacyVaultsLength() public view returns (uint) {
         return vaults[VaultType.LEGACY].length;
     }
@@ -494,8 +527,12 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
         vaultInfos[_vault].enabled = false;
     }
 
-    function setKeeper(address _keeper) public onlyOwner {
-        keeper = _keeper;
+    function enableKeeper(address _keeper) public onlyOwner {
+        keepers[_keeper] = true;
+    }
+
+    function disableKeeper(address _keeper) public onlyOwner {
+        keepers[_keeper] = false;
     }
 
     function setModerator(address _moderator) public onlyOwner {
@@ -512,10 +549,5 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
     function setSlippageFactor(uint _slippageFactor) public onlyOwner {
         slippageFactor = _slippageFactor;
-    }
-
-    // @Deprecated setMaxVaults
-    function setMaxVaults(uint16 _maxVaults) public onlyOwner {
-        maxVaults = _maxVaults;
     }
 }
