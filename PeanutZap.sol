@@ -72,11 +72,25 @@ contract PeanutZap is OwnableUpgradeable {
         if (_inputToken != tokens.token1)
             _swap(_router, swapInputAmount, _minToken1, _pathToToken1);
 
+        uint amountToken0 = _getBalance(tokens.token0).sub(initialBalances.token0);
+        uint amountToken1 = _getBalance(tokens.token1).sub(initialBalances.token1);
+
+        // TODO gas improvement to make a single allowance for swap and add liquidity if same token
+        IERC20(tokens.token0).safeIncreaseAllowance(
+            address(_router),
+            amountToken0
+        );
+
+        IERC20(tokens.token1).safeIncreaseAllowance(
+            address(_router),
+            amountToken1
+        );
+
         _router.addLiquidity(
             tokens.token0,
             tokens.token1,
-            _getBalance(tokens.token0).sub(initialBalances.token0),
-            _getBalance(tokens.token1).sub(initialBalances.token1),
+            amountToken0,
+            amountToken1,
             _minToken0,
             _minToken1,
             msg.sender,
@@ -240,6 +254,11 @@ contract PeanutZap is OwnableUpgradeable {
         uint _amountOutMin,
         address[] memory _path
     ) private {
+        IERC20(_path[0]).safeIncreaseAllowance(
+            address(_router),
+            _amountIn
+        );
+
         _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amountIn,
             _amountOutMin,
