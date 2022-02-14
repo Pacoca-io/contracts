@@ -8,6 +8,12 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPancakePair.sol";
 
+interface IwNative is IERC20 {
+    function deposit() external payable;
+
+    function withdraw(uint) external;
+}
+
 contract PeanutZap is OwnableUpgradeable {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
@@ -24,18 +30,18 @@ contract PeanutZap is OwnableUpgradeable {
     }
 
     address public treasury;
-    IERC20 public WBNB;
+    IwNative public wNATIVE;
 
     function initialize(
         address _treasury,
         address _owner,
-        address _wbnb
+        address _wNative
     ) public initializer {
         __Ownable_init();
         transferOwnership(_owner);
 
         treasury = _treasury;
-        WBNB = IERC20(_wbnb);
+        wNATIVE = IwNative(_wNative);
     }
 
     function zapToken(
@@ -75,6 +81,28 @@ contract PeanutZap is OwnableUpgradeable {
             _minToken1,
             msg.sender,
             block.timestamp
+        );
+    }
+
+    function zapNative(
+        IPancakeRouter02 _router,
+        address[] calldata _pathToToken0,
+        address[] calldata _pathToToken1,
+        IPancakePair _outputToken,
+        uint _minToken0,
+        uint _minToken1
+    ) external payable {
+        wNATIVE.deposit{value : msg.value}();
+
+        zapToken(
+            _router,
+            _pathToToken0,
+            _pathToToken1,
+            address(wNATIVE),
+            _outputToken,
+            msg.value,
+            _minToken0,
+            _minToken1
         );
     }
 
