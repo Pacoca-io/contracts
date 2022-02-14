@@ -2,12 +2,13 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPancakePair.sol";
 
-contract PeanutZap is Ownable {
+contract PeanutZap is OwnableUpgradeable {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
@@ -23,10 +24,18 @@ contract PeanutZap is Ownable {
     }
 
     address public treasury;
+    IERC20 public WBNB;
 
-    constructor (address _treasury, address _owner) public {
-        treasury = _treasury;
+    function initialize(
+        address _treasury,
+        address _owner,
+        address _wbnb
+    ) public initializer {
+        __Ownable_init();
         transferOwnership(_owner);
+
+        treasury = _treasury;
+        WBNB = IERC20(_wbnb);
     }
 
     function zapToken(
