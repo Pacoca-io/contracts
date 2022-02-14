@@ -92,6 +92,7 @@ contract PeanutZap is OwnableUpgradeable {
         uint _minToken0,
         uint _minToken1
     ) external payable {
+        // TODO check if this throws or returns false in case of .deposit() failing
         wNATIVE.deposit{value : msg.value}();
 
         zapToken(
@@ -116,6 +117,38 @@ contract PeanutZap is OwnableUpgradeable {
         uint _minOutputToken0,
         uint _minOutputToken1
     ) public {
+        uint initialOutputTokenBalance = _getBalance(_outputToken);
+
+        _unZapToken(
+            _router,
+            _pathFromToken0,
+            _pathFromToken1,
+            _inputToken,
+            _outputToken,
+            _inputTokenAmount,
+            _minOutputToken0,
+            _minOutputToken1
+        );
+
+        uint finalOutputTokenBalance = _getBalance(_outputToken);
+
+        if (finalOutputTokenBalance != initialOutputTokenBalance)
+            IERC20(_outputToken).transfer(
+                msg.sender,
+                finalOutputTokenBalance.sub(initialOutputTokenBalance)
+            );
+    }
+
+    function _unZapToken(
+        IPancakeRouter02 _router,
+        address[] calldata _pathFromToken0,
+        address[] calldata _pathFromToken1,
+        IPancakePair _inputToken,
+        address _outputToken,
+        uint _inputTokenAmount,
+        uint _minOutputToken0,
+        uint _minOutputToken1
+    ) public {
         Tokens memory tokens = _getTokens(_inputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
@@ -123,8 +156,6 @@ contract PeanutZap is OwnableUpgradeable {
             _getBalance(tokens.token1),
             _inputToken.balanceOf(address(this))
         );
-
-        uint initialOutputTokenBalance = _getBalance(_outputToken);
 
         _inputToken.transferFrom(msg.sender, address(this), _inputTokenAmount);
 
@@ -156,15 +187,40 @@ contract PeanutZap is OwnableUpgradeable {
                 _pathFromToken1,
                 msg.sender
             );
+    }
 
-        uint finalOutputTokenBalance = _getBalance(_outputToken);
+    function unZapNative(
+        IPancakeRouter02 _router,
+        address[] calldata _pathFromToken0,
+        address[] calldata _pathFromToken1,
+        IPancakePair _inputToken,
+        uint _inputTokenAmount,
+        uint _minOutputToken0,
+        uint _minOutputToken1
+    ) external {
+        address outputToken = address(wNATIVE);
+        uint initialOutputTokenBalance = _getBalance(outputToken);
 
-        if (finalOutputTokenBalance != initialOutputTokenBalance)
-            IERC20(_outputToken).transferFrom(
-                address(this),
-                msg.sender,
-                finalOutputTokenBalance.sub(initialOutputTokenBalance)
-            );
+        _unZapToken(
+            _router,
+            _pathFromToken0,
+            _pathFromToken1,
+            _inputToken,
+            outputToken,
+            _inputTokenAmount,
+            _minOutputToken0,
+            _minOutputToken1
+        );
+
+        uint finalOutputTokenBalance = _getBalance(outputToken);
+
+        if (finalOutputTokenBalance != initialOutputTokenBalance) {
+            uint amount = finalOutputTokenBalance.sub(initialOutputTokenBalance);
+
+            wNATIVE.withdraw(amount);
+
+            msg.sender.transfer(amount);
+        }
     }
 
     function _getTokens(
