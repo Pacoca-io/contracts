@@ -16,13 +16,13 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "./interfaces/IPancakeRouter01.sol";
 
-contract PoolV2 is Ownable, ReentrancyGuard {
+contract UpgradeablePool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -50,13 +50,13 @@ contract PoolV2 is Ownable, ReentrancyGuard {
     uint256 public rewardPerBlock;
 
     // The precision factor
-    uint256 public immutable PRECISION_FACTOR;
+    uint256 public PRECISION_FACTOR;
 
     // The reward token
-    IERC20 public immutable rewardToken;
+    IERC20 public rewardToken;
 
     // The staked token
-    IERC20 public immutable stakedToken;
+    IERC20 public stakedToken;
 
     // Info of each user that stakes tokens (stakedToken)
     mapping(address => UserInfo) public userInfo;
@@ -78,7 +78,7 @@ contract PoolV2 is Ownable, ReentrancyGuard {
      * @param _bonusEndBlock: end block
      * @param _admin: admin address with ownership
      */
-    constructor(
+    function initialize(
         address _stakedToken,
         address _rewardToken,
         uint256 _rewardTokenDecimals,
@@ -86,7 +86,7 @@ contract PoolV2 is Ownable, ReentrancyGuard {
         uint256 _startBlock,
         uint256 _bonusEndBlock,
         address _admin
-    ) public {
+    ) public initializer {
         stakedToken = IERC20(_stakedToken);
         rewardToken = IERC20(_rewardToken);
         rewardPerBlock = _rewardPerBlock;
@@ -100,7 +100,10 @@ contract PoolV2 is Ownable, ReentrancyGuard {
         // Set the lastRewardBlock as the startBlock
         lastRewardBlock = startBlock;
 
+        __ReentrancyGuard_init();
+
         // Transfer ownership to the admin address who becomes owner of the contract
+        __Ownable_init();
         transferOwnership(_admin);
     }
 
