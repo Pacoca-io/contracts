@@ -78,23 +78,15 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
 
         IERC20(_inputToken).transferFrom(msg.sender, address(this), _inputTokenAmount);
 
-        uint swapInputAmount = (_getBalance(_inputToken) - initialBalances.inputToken) / 2;
-
-        if (_inputToken != tokens.token0)
-            _swap(_router, swapInputAmount, _minToken0, _pathToToken0, address(this));
-
-        if (_inputToken != tokens.token1)
-            _swap(_router, swapInputAmount, _minToken1, _pathToToken1, address(this));
-
-        _addLiquidity(
+        _zap(
             _router,
-            tokens.token0,
-            tokens.token1,
-            _getBalance(tokens.token0) - initialBalances.token0,
-            _getBalance(tokens.token1) - initialBalances.token1,
+            _pathToToken0,
+            _pathToToken1,
+            _inputToken,
             _minToken0,
             _minToken1,
-            msg.sender
+            tokens,
+            initialBalances
         );
     }
 
@@ -106,18 +98,55 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         uint _minToken0,
         uint _minToken1
     ) external payable {
-        // TODO check if this throws or returns false in case of .deposit() failing
+        Tokens memory tokens = _getTokens(_outputToken);
+
+        InitialBalances memory initialBalances = InitialBalances(
+            _getBalance(tokens.token0),
+            _getBalance(tokens.token1),
+            _getBalance(address(wNATIVE))
+        );
+
         wNATIVE.deposit{value : msg.value}();
 
-        zapToken(
+        _zap(
             _router,
             _pathToToken0,
             _pathToToken1,
             address(wNATIVE),
-            _outputToken,
-            msg.value,
             _minToken0,
-            _minToken1
+            _minToken1,
+            tokens,
+            initialBalances
+        );
+    }
+
+    function _zap(
+        IPancakeRouter02 _router,
+        address[] calldata _pathToToken0,
+        address[] calldata _pathToToken1,
+        address _inputToken,
+        uint _minToken0,
+        uint _minToken1,
+        Tokens memory _tokens,
+        InitialBalances memory _initialBalances
+    ) private {
+        uint swapInputAmount = (_getBalance(_inputToken) - _initialBalances.inputToken) / 2;
+
+        if (_inputToken != _tokens.token0)
+            _swap(_router, swapInputAmount, _minToken0, _pathToToken0, address(this));
+
+        if (_inputToken != _tokens.token1)
+            _swap(_router, swapInputAmount, _minToken1, _pathToToken1, address(this));
+
+        _addLiquidity(
+            _router,
+            _tokens.token0,
+            _tokens.token1,
+            _getBalance(_tokens.token0) - _initialBalances.token0,
+            _getBalance(_tokens.token1) - _initialBalances.token1,
+            _minToken0,
+            _minToken1,
+            msg.sender
         );
     }
 
