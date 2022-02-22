@@ -304,4 +304,6 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
     }
+
+    receive() external payable {}
 }
