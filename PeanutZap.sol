@@ -23,8 +23,6 @@ import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPancakePair.sol";
 import "./helpers/PeanutRouter.sol";
 
-import "hardhat/console.sol";
-
 interface IwNative is IERC20 {
     function deposit() external payable;
 
@@ -78,7 +76,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
             _getBalance(_inputToken)
         );
 
-        IERC20(_inputToken).transferFrom(msg.sender, address(this), _inputTokenAmount);
+        IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _inputTokenAmount);
 
         _zap(
             _router,
@@ -181,12 +179,11 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         uint finalOutputTokenBalance = _getBalance(_outputToken);
 
         if (finalOutputTokenBalance != initialOutputTokenBalance)
-            IERC20(_outputToken).transfer(
+            IERC20(_outputToken).safeTransfer(
                 msg.sender,
                 finalOutputTokenBalance - initialOutputTokenBalance
             );
     }
-
 
     // TODO maybe consider only the output of desired token
     function unZapNative(
@@ -246,10 +243,9 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
             _getBalance(_inputToken)
         );
 
-        IERC20(_inputToken).transferFrom(msg.sender, address(this), _inputTokenAmount);
+        IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _inputTokenAmount);
 
         // TODO support fee on transfer tokens
-        // TODO check if needs to approve spend
         _removeLiquidity(
             _router,
             tokens.token0,
@@ -296,7 +292,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
     function collectDust(address _token) public {
         IERC20 token = IERC20(_token);
 
-        token.transfer(treasury, token.balanceOf(address(this)));
+        token.safeTransfer(treasury, token.balanceOf(address(this)));
     }
 
     function collectDustMultiple(address[] calldata _tokens) public {
