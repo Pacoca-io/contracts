@@ -65,6 +65,29 @@ contract PeanutRouter {
         );
     }
 
+    function _removeLiquidity(
+        IPancakeRouter02 _router,
+        address _token0,
+        address _token1,
+        address _inputToken,
+        uint _liquidity,
+        uint _minOut0,
+        uint _minOut1
+    ) internal {
+        _approveSpend(_inputToken, address(_router), _liquidity);
+
+        // TODO support fee on transfer tokens
+        _router.removeLiquidity(
+            _token0,
+            _token1,
+            _liquidity,
+            _minOut0, // TODO maybe care about output amounts
+            _minOut1, // TODO maybe care about output amounts
+            address(this),
+            block.timestamp
+        );
+    }
+
     function _approveSpend(
         address _token,
         address _spender,
