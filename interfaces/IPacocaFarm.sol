@@ -13,4 +13,6 @@ interface IPacocaFarm {
     function userInfo(uint256 _pid, address _user) external view returns (uint256 shares, uint256 rewardDebt);
 
     function pendingPACOCA(uint256 _pid, address _user) external view returns (uint256);
+
+    function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256);
 }
