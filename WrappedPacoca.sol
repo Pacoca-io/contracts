@@ -14,31 +14,36 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
+
+import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IPacocaFarm.sol";
 
-contract WrappedPacoca is ERC20, Ownable, ReentrancyGuard {
+contract WrappedPacoca is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
-    using SafeMath for uint;
 
     IERC20 constant public PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
     IPacocaFarm constant public PACOCA_FARM = IPacocaFarm(0x55410D946DFab292196462ca9BE9f3E4E4F337Dd);
     uint constant public POOL_ID = 0;
 
-    constructor() public ERC20("Wrapped Pacoca", "wPACOCA") {
-        PACOCA.safeApprove(address(PACOCA_FARM), uint(-1));
+    function initialize(address _owner) public initializer {
+        PACOCA.safeApprove(address(PACOCA_FARM), (2 ** 256) - 1);
+
+        __ERC20_init("Wrapped Pacoca", "wPACOCA");
+        __ReentrancyGuard_init();
+        __Ownable_init();
+
+        transferOwnership(_owner);
     }
 
     // it calculate the total underlying pacoca this contract holds.
     function balance() public view returns (uint) {
-        return pacocaBalance().add(stakedBalance());
+        return pacocaBalance() + stakedBalance();
     }
 
     // it calculates how much pacoca this contract holds.
@@ -56,7 +61,7 @@ contract WrappedPacoca is ERC20, Ownable, ReentrancyGuard {
      * Returns an uint with 18 decimals of how much underlying asset one vault share represents.
      */
     function getPricePerFullShare() public view returns (uint) {
-        return totalSupply() == 0 ? 1e18 : balance().mul(1e18).div(totalSupply());
+        return totalSupply() == 0 ? 1e18 : (balance() * 1e18) / totalSupply();
     }
 
     /**
@@ -80,14 +85,14 @@ contract WrappedPacoca is ERC20, Ownable, ReentrancyGuard {
 
         earn();
 
-        _amount = balance().sub(initialBalance);
+        _amount = balance() - initialBalance;
 
         uint shares = 0;
 
         if (totalSupply() == 0) {
             shares = _amount;
         } else {
-            shares = (_amount.mul(totalSupply())).div(initialBalance);
+            shares = (_amount * totalSupply()) / initialBalance;
         }
 
         _mint(msg.sender, shares);
@@ -117,14 +122,14 @@ contract WrappedPacoca is ERC20, Ownable, ReentrancyGuard {
      * A proportional number of IOU tokens are burned in the process.
      */
     function withdraw(uint _shares) public nonReentrant {
-        uint requestedAmount = (balance().mul(_shares)).div(totalSupply());
+        uint requestedAmount = (balance() * _shares) / totalSupply();
 
         _burn(msg.sender, _shares);
 
         uint initialBalance = pacocaBalance();
 
         if (initialBalance < requestedAmount) {
-            uint withdrawAmount = requestedAmount.sub(initialBalance);
+            uint withdrawAmount = requestedAmount - initialBalance;
 
             PACOCA_FARM.withdraw(POOL_ID, withdrawAmount);
         }
