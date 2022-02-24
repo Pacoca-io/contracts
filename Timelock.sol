@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: UNLICENSED
+
 // COPIED FROM https://github.com/compound-finance/compound-protocol/blob/master/contracts/Governance/GovernorAlpha.sol
 // Copyright 2020 Compound Labs, Inc.
 // Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -122,7 +124,7 @@ contract Timelock {
         }
 
         // solium-disable-next-line security/no-call-value
-        (bool success, bytes memory returnData) = target.call.value(value)(callData);
+        (bool success, bytes memory returnData) = target.call{value: value}(callData);
         require(success, string(returnData));
 
         emit ExecuteTransaction(txHash, target, value, signature, data, eta);

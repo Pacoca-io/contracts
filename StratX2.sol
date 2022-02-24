@@ -91,7 +91,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
 
     // Receives new deposits from user
     function deposit(
-        address _userAddress,
+        address,
         uint256 _wantAmt
     ) external virtual onlyOwner nonReentrant whenNotPaused returns (uint256) {
         IERC20(wantAddress).safeTransferFrom(
@@ -145,7 +145,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     }
 
     function withdraw(
-        address _userAddress,
+        address,
         uint256 _wantAmt
     ) external virtual onlyOwner nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt <= 0");
