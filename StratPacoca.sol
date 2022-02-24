@@ -47,7 +47,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
 
     // Transfer want tokens pacocaFarm -> strategy
     function deposit(
-        address _userAddress,
+        address,
         uint256 _wantAmt
     ) external virtual onlyOwner nonReentrant whenNotPaused returns (uint256) {
         IERC20(wantAddress).safeTransferFrom(
@@ -75,7 +75,7 @@ contract StratPacoca is Ownable, ReentrancyGuard, Pausable, Governable {
 
     // Transfer want tokens strategy -> pacocaFarm
     function withdraw(
-        address _userAddress,
+        address,
         uint256 _wantAmt
     ) external virtual onlyOwner nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt <= 0");
