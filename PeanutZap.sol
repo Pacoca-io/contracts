@@ -20,17 +20,12 @@ import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPancakeRouter02.sol";
-import "./interfaces/IPancakePair.sol";
 import "./helpers/PeanutRouter.sol";
 import "./interfaces/IwNative.sol";
+import "./helpers/ZapHelpers.sol";
 
-contract PeanutZap is OwnableUpgradeable, PeanutRouter {
+contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
     using SafeERC20 for IERC20;
-
-    struct Pair {
-        address token0;
-        address token1;
-    }
 
     struct InitialBalances {
         uint token0;
@@ -316,49 +311,6 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
                 unZapInfo.pathFromToken1,
                 address(this)
             );
-    }
-
-    function _approveUsingPermit(address _token, uint _inputTokenAmount, bytes calldata _signatureData) internal {
-        (uint8 v, bytes32 r, bytes32 s, uint deadline) = abi.decode(_signatureData, (uint8, bytes32, bytes32, uint));
-
-        IPancakePair(_token).permit(
-            msg.sender,
-            address(this),
-            _inputTokenAmount,
-            deadline,
-            v,
-            r,
-            s
-        );
-    }
-
-    function _getPairInfo(
-        address _pair
-    ) private view returns (
-        Pair memory tokens
-    ) {
-        IPancakePair pair = IPancakePair(_pair);
-
-        return Pair(pair.token0(), pair.token1());
-    }
-
-    function _getBalance(address _token) private view returns (uint) {
-        return IERC20(_token).balanceOf(address(this));
-    }
-
-    function _calculateUnZapProfit(
-        uint _initialBalance,
-        uint _currentBalance,
-        uint _minOutput
-    ) private pure returns (uint) {
-        uint profit = _currentBalance - _initialBalance;
-
-        require(
-            profit > 0 && profit >= _minOutput,
-            "PeanutZap:: Insufficient output token amount"
-        );
-
-        return profit;
     }
 
     function collectDust(address _token) public {
