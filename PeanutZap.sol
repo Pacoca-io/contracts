@@ -389,7 +389,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
     }
 
     function _receiveUserTokens(address _token, uint _inputTokenAmount, bytes calldata _signatureData) internal {
-        (uint8 v, bytes32 r, bytes32 s, uint8 deadline) = abi.decode(_signatureData, (uint8, bytes32, bytes32, uint));
+        (uint8 v, bytes32 r, bytes32 s, uint deadline) = abi.decode(_signatureData, (uint8, bytes32, bytes32, uint));
 
         IPancakePair(_token).permit(
             msg.sender,
