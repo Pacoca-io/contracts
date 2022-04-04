@@ -38,6 +38,22 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         uint inputToken;
     }
 
+    struct ZapInfo {
+        IPancakeRouter02 router;
+        address[] pathFromToken0;
+        address[] pathFromToken1;
+        uint minToken0;
+        uint minToken1;
+    }
+
+    struct UnZapInfo {
+        IPancakeRouter02 router;
+        address[] pathToToken0;
+        address[] pathToToken1;
+        uint minToken0;
+        uint minToken1;
+    }
+
     address public treasury;
     IwNative public wNATIVE;
 
@@ -54,14 +70,10 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
     }
 
     function zapToken(
-        IPancakeRouter02 _router,
-        address[] calldata _pathToToken0,
-        address[] calldata _pathToToken1,
+        bytes calldata _zapInfo,
         address _inputToken,
         address _outputToken,
-        uint _inputTokenAmount,
-        uint _minToken0,
-        uint _minToken1
+        uint _inputTokenAmount
     ) public {
         Pair memory pair = _getPairInfo(_outputToken);
 
@@ -74,24 +86,16 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _inputTokenAmount);
 
         _zap(
-            _router,
-            _pathToToken0,
-            _pathToToken1,
+            _zapInfo,
             _inputToken,
-            _minToken0,
-            _minToken1,
             pair,
             initialBalances
         );
     }
 
     function zapNative(
-        IPancakeRouter02 _router,
-        address[] calldata _pathToToken0,
-        address[] calldata _pathToToken1,
-        address _outputToken,
-        uint _minToken0,
-        uint _minToken1
+        bytes calldata _zapInfo,
+        address _outputToken
     ) external payable {
         Pair memory pair = _getPairInfo(_outputToken);
 
@@ -105,43 +109,36 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         wNATIVE.deposit{value : msg.value}();
 
         _zap(
-            _router,
-            _pathToToken0,
-            _pathToToken1,
+            _zapInfo,
             address(wNATIVE),
-            _minToken0,
-            _minToken1,
             pair,
             initialBalances
         );
     }
 
     function _zap(
-        IPancakeRouter02 _router,
-        address[] calldata _pathToToken0,
-        address[] calldata _pathToToken1,
+        bytes calldata _zapInfo,
         address _inputToken,
-        uint _minToken0,
-        uint _minToken1,
         Pair memory _pair,
         InitialBalances memory _initialBalances
     ) private {
+        ZapInfo memory zapInfo = abi.decode(_zapInfo, (ZapInfo));
         uint swapInputAmount = (_getBalance(_inputToken) - _initialBalances.inputToken) / 2;
 
         if (_inputToken != _pair.token0)
-            _swap(_router, swapInputAmount, _minToken0, _pathToToken0, address(this));
+            _swap(zapInfo.router, swapInputAmount, zapInfo.minToken0, zapInfo.pathFromToken0, address(this));
 
         if (_inputToken != _pair.token1)
-            _swap(_router, swapInputAmount, _minToken1, _pathToToken1, address(this));
+            _swap(zapInfo.router, swapInputAmount, zapInfo.minToken1, zapInfo.pathFromToken1, address(this));
 
         _addLiquidity(
-            _router,
+            zapInfo.router,
             _pair.token0,
             _pair.token1,
             _getBalance(_pair.token0) - _initialBalances.token0,
             _getBalance(_pair.token1) - _initialBalances.token1,
-            _minToken0,
-            _minToken1,
+            zapInfo.minToken0,
+            zapInfo.minToken1,
             msg.sender
         );
     }
