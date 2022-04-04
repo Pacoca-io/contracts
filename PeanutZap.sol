@@ -22,17 +22,12 @@ import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPancakePair.sol";
 import "./helpers/PeanutRouter.sol";
-
-interface IwNative is IERC20 {
-    function deposit() external payable;
-
-    function withdraw(uint) external;
-}
+import "./interfaces/IwNative.sol";
 
 contract PeanutZap is OwnableUpgradeable, PeanutRouter {
     using SafeERC20 for IERC20;
 
-    struct Tokens {
+    struct Pair {
         address token0;
         address token1;
     }
@@ -68,11 +63,11 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         uint _minToken0,
         uint _minToken1
     ) public {
-        Tokens memory tokens = _getTokens(_outputToken);
+        Pair memory pair = _getPairInfo(_outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
-            _getBalance(tokens.token0),
-            _getBalance(tokens.token1),
+            _getBalance(pair.token0),
+            _getBalance(pair.token1),
             _getBalance(_inputToken)
         );
 
@@ -85,7 +80,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
             _inputToken,
             _minToken0,
             _minToken1,
-            tokens,
+            pair,
             initialBalances
         );
     }
@@ -98,11 +93,11 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         uint _minToken0,
         uint _minToken1
     ) external payable {
-        Tokens memory tokens = _getTokens(_outputToken);
+        Pair memory pair = _getPairInfo(_outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
-            _getBalance(tokens.token0),
-            _getBalance(tokens.token1),
+            _getBalance(pair.token0),
+            _getBalance(pair.token1),
             _getBalance(address(wNATIVE))
         );
 
@@ -116,7 +111,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
             address(wNATIVE),
             _minToken0,
             _minToken1,
-            tokens,
+            pair,
             initialBalances
         );
     }
@@ -128,23 +123,23 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         address _inputToken,
         uint _minToken0,
         uint _minToken1,
-        Tokens memory _tokens,
+        Pair memory _pair,
         InitialBalances memory _initialBalances
     ) private {
         uint swapInputAmount = (_getBalance(_inputToken) - _initialBalances.inputToken) / 2;
 
-        if (_inputToken != _tokens.token0)
+        if (_inputToken != _pair.token0)
             _swap(_router, swapInputAmount, _minToken0, _pathToToken0, address(this));
 
-        if (_inputToken != _tokens.token1)
+        if (_inputToken != _pair.token1)
             _swap(_router, swapInputAmount, _minToken1, _pathToToken1, address(this));
 
         _addLiquidity(
             _router,
-            _tokens.token0,
-            _tokens.token1,
-            _getBalance(_tokens.token0) - _initialBalances.token0,
-            _getBalance(_tokens.token1) - _initialBalances.token1,
+            _pair.token0,
+            _pair.token1,
+            _getBalance(_pair.token0) - _initialBalances.token0,
+            _getBalance(_pair.token1) - _initialBalances.token1,
             _minToken0,
             _minToken1,
             msg.sender
@@ -299,11 +294,11 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         uint _minOutputToken1,
         address _to
     ) public {
-        Tokens memory tokens = _getTokens(_inputToken);
+        Pair memory pair = _getPairInfo(_inputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
-            _getBalance(tokens.token0),
-            _getBalance(tokens.token1),
+            _getBalance(pair.token0),
+            _getBalance(pair.token1),
             _getBalance(_inputToken)
         );
 
@@ -312,27 +307,27 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         // TODO support fee on transfer tokens
         _removeLiquidity(
             _router,
-            tokens.token0,
-            tokens.token1,
+            pair.token0,
+            pair.token1,
             _inputToken,
             _getBalance(_inputToken) - initialBalances.inputToken,
             0, // TODO maybe care about output amounts
             0 // TODO maybe care about output amounts
         );
 
-        if (_outputToken != tokens.token0)
+        if (_outputToken != pair.token0)
             _swap(
                 _router,
-                _getBalance(tokens.token0) - initialBalances.token0,
+                _getBalance(pair.token0) - initialBalances.token0,
                 _minOutputToken0,
                 _pathFromToken0,
                 _to
             );
 
-        if (_outputToken != tokens.token1)
+        if (_outputToken != pair.token1)
             _swap(
                 _router,
-                _getBalance(tokens.token1) - initialBalances.token1,
+                _getBalance(pair.token1) - initialBalances.token1,
                 _minOutputToken1,
                 _pathFromToken1,
                 _to
@@ -348,11 +343,11 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         address _to,
         bytes calldata _signatureData
     ) public {
-        Tokens memory tokens  = _getTokens(_tokens[0]);
+        Pair memory pair = _getPairInfo(_tokens[0]);
 
         InitialBalances memory initialBalances = InitialBalances(
-            _getBalance(tokens.token0),
-            _getBalance(tokens.token1),
+            _getBalance(pair.token0),
+            _getBalance(pair.token1),
             _getBalance(_tokens[0])
         );
 
@@ -360,8 +355,8 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
 
         _removeLiquidity(
             _router,
-            tokens.token0,
-            tokens.token1,
+            pair.token0,
+            pair.token1,
             _tokens[0],
             _getBalance(_tokens[0]) - initialBalances.inputToken,
             0, // TODO maybe care about output amounts
@@ -369,19 +364,19 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         );
 
 
-        if (_tokens[1] != tokens.token0)
+        if (_tokens[1] != pair.token0)
             _swap(
                 _router,
-                _getBalance(tokens.token0) - initialBalances.token0,
+                _getBalance(pair.token0) - initialBalances.token0,
                 _minOutputs[0],
                 _pathFromTokens[0],
                 _to
             );
 
-        if (_tokens[1] != tokens.token1)
+        if (_tokens[1] != pair.token1)
             _swap(
                 _router,
-                _getBalance(tokens.token1) - initialBalances.token1,
+                _getBalance(pair.token1) - initialBalances.token1,
                 _minOutputs[1],
                 _pathFromTokens[1],
                 _to
@@ -408,14 +403,14 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         );
     }
 
-    function _getTokens(
-        address _lp
+    function _getPairInfo(
+        address _pair
     ) private view returns (
-        Tokens memory tokens
+        Pair memory tokens
     ) {
-        IPancakePair lp = IPancakePair(_lp);
+        IPancakePair pair = IPancakePair(_pair);
 
-        return Tokens(lp.token0(), lp.token1());
+        return Pair(pair.token0(), pair.token1());
     }
 
     function _getBalance(address _token) private view returns (uint) {
