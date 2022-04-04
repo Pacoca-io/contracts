@@ -356,7 +356,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
             _getBalance(_tokens[0])
         );
 
-        _receiveUserToken(_tokens[0], _inputTokenAmount, _signatureData);
+        _receiveUserTokens(_tokens[0], _inputTokenAmount, _signatureData);
 
         _removeLiquidity(
             _router,
@@ -388,13 +388,8 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
             );
     }
 
-    function _receiveUserToken(address _token, uint _inputTokenAmount, bytes calldata _signatureData) internal {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-        uint deadline;
-
-        (v, r, s, deadline) = abi.decode(_signatureData, (uint8, bytes32, bytes32, uint));
+    function _receiveUserTokens(address _token, uint _inputTokenAmount, bytes calldata _signatureData) internal {
+        (uint8 v, bytes32 r, bytes32 s, uint8 deadline) = abi.decode(_signatureData, (uint8, bytes32, bytes32, uint));
 
         IPancakePair(_token).permit(
             msg.sender,
