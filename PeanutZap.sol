@@ -185,6 +185,70 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
             );
     }
 
+    function unZapTokenWithPermit(
+        IPancakeRouter02 _router,
+        address[][] calldata _pathFromTokens,
+        address[2] memory _tokens,
+        uint _inputTokenAmount,
+        uint[2] calldata _minOutputs,
+        address _to,
+        bytes calldata _signatureData
+    ) external {
+        uint initialOutputTokenBalance = _getBalance(_tokens[1]);
+
+        _unZapTokenWithPermit(
+            _router,
+            _pathFromTokens,
+            _tokens,
+            _inputTokenAmount,
+            _minOutputs,
+            _to,
+            _signatureData
+        );
+
+        uint finalOutputTokenBalance = _getBalance(_tokens[1]);
+
+        if (finalOutputTokenBalance != initialOutputTokenBalance)
+            IERC20(_tokens[1]).safeTransfer(
+                msg.sender,
+                _getBalance(_tokens[1]) - initialOutputTokenBalance
+            );
+    }
+
+    function unZapNativeWithPermit(
+        IPancakeRouter02 _router,
+        address[][] calldata _pathFromTokens,
+        address _inputToken,
+        uint _inputTokenAmount,
+        uint[2] calldata _minOutputs,
+        address payable _to,
+        bytes calldata _signatureData
+    ) external {
+        address outputToken = address(wNATIVE);
+        uint initialOutputTokenBalance = _getBalance(outputToken);
+
+        _unZapTokenWithPermit(
+            _router,
+            _pathFromTokens,
+            [_inputToken, outputToken],
+            _inputTokenAmount,
+            _minOutputs,
+            address(this),
+            _signatureData
+        );
+
+        uint finalOutputTokenBalance = _getBalance(outputToken);
+
+        if (finalOutputTokenBalance != initialOutputTokenBalance) {
+            uint amount = finalOutputTokenBalance - initialOutputTokenBalance;
+
+            wNATIVE.withdraw(amount);
+
+            // TODO check if safe
+            _to.transfer(amount);
+        }
+    }
+
     // TODO maybe consider only the output of desired token
     function unZapNative(
         IPancakeRouter02 _router,
@@ -273,6 +337,80 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
                 _pathFromToken1,
                 _to
             );
+    }
+
+    function _unZapTokenWithPermit(
+        IPancakeRouter02 _router,
+        address[][] calldata _pathFromTokens,
+        address[2] memory _tokens,
+        uint _inputTokenAmount,
+        uint[2] calldata _minOutputs,
+        address _to,
+        bytes calldata _signatureData
+    ) public {
+        Tokens memory tokens  = _getTokens(_tokens[0]);
+
+        InitialBalances memory initialBalances = InitialBalances(
+            _getBalance(tokens.token0),
+            _getBalance(tokens.token1),
+            _getBalance(_tokens[0])
+        );
+
+        _receiveUserToken(_tokens[0], _inputTokenAmount, _signatureData);
+
+        _removeLiquidity(
+            _router,
+            tokens.token0,
+            tokens.token1,
+            _tokens[0],
+            _getBalance(_tokens[0]) - initialBalances.inputToken,
+            0, // TODO maybe care about output amounts
+            0 // TODO maybe care about output amounts
+        );
+
+
+        if (_tokens[1] != tokens.token0)
+            _swap(
+                _router,
+                _getBalance(tokens.token0) - initialBalances.token0,
+                _minOutputs[0],
+                _pathFromTokens[0],
+                _to
+            );
+
+        if (_tokens[1] != tokens.token1)
+            _swap(
+                _router,
+                _getBalance(tokens.token1) - initialBalances.token1,
+                _minOutputs[1],
+                _pathFromTokens[1],
+                _to
+            );
+    }
+
+    function _receiveUserToken(address _token, uint _inputTokenAmount, bytes calldata _signatureData) internal {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        uint deadline;
+
+        (v, r, s, deadline) = abi.decode(_signatureData, (uint8, bytes32, bytes32, uint));
+
+        IPancakePair(_token).permit(
+            msg.sender,
+            address(this),
+            _inputTokenAmount,
+            deadline,
+            v,
+            r,
+            s
+        );
+
+        IERC20(_token).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _inputTokenAmount
+        );
     }
 
     function _getTokens(
