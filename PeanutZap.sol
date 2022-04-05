@@ -24,6 +24,8 @@ import "./helpers/PeanutRouter.sol";
 import "./interfaces/IwNative.sol";
 import "./helpers/ZapHelpers.sol";
 
+import "hardhat/console.sol";
+
 contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
     using SafeERC20 for IERC20;
 
@@ -31,23 +33,6 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
         uint token0;
         uint token1;
         uint inputToken;
-    }
-
-    struct ZapInfo {
-        IPancakeRouter02 router;
-        address[] pathToToken0;
-        address[] pathToToken1;
-        uint minToken0;
-        uint minToken1;
-    }
-
-    struct UnZapInfo {
-        IPancakeRouter02 router;
-        address[] pathFromToken0;
-        address[] pathFromToken1;
-        uint minToken0;
-        uint minToken1;
-        uint minOutputToken;
     }
 
     address public treasury;
@@ -118,17 +103,17 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
         Pair memory _pair,
         InitialBalances memory _initialBalances
     ) private {
-        ZapInfo memory zapInfo = abi.decode(_zapInfo, (ZapInfo));
+        ZapInfo memory zapInfo = _decodeZapInfo(_zapInfo);
         uint swapInputAmount = (_getBalance(_inputToken) - _initialBalances.inputToken) / 2;
 
         if (_inputToken != _pair.token0)
-            _swap(zapInfo.router, swapInputAmount, zapInfo.minToken0, zapInfo.pathToToken0, address(this));
+            _swap(IPancakeRouter02(zapInfo.router), swapInputAmount, zapInfo.minToken0, zapInfo.pathToToken0, address(this));
 
         if (_inputToken != _pair.token1)
-            _swap(zapInfo.router, swapInputAmount, zapInfo.minToken1, zapInfo.pathToToken1, address(this));
+            _swap(IPancakeRouter02(zapInfo.router), swapInputAmount, zapInfo.minToken1, zapInfo.pathToToken1, address(this));
 
         _addLiquidity(
-            zapInfo.router,
+            IPancakeRouter02(zapInfo.router),
             _pair.token0,
             _pair.token1,
             _getBalance(_pair.token0) - _initialBalances.token0,
@@ -163,6 +148,8 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
         uint _minOutputTokenAmount,
         bytes calldata _signatureData
     ) external {
+        console.log('PeanutZap: %s', address(this));
+
         _approveUsingPermit(
             _inputToken,
             _inputTokenAmount,
@@ -272,7 +259,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
         address _outputToken,
         uint _inputTokenAmount
     ) public {
-        UnZapInfo memory unZapInfo = abi.decode(_unZapInfo, (UnZapInfo));
+        UnZapInfo memory unZapInfo = _decodeUnZapInfo(_unZapInfo);
         Pair memory pair = _getPairInfo(_inputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
@@ -298,7 +285,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
             _swap(
                 unZapInfo.router,
                 _getBalance(pair.token0) - initialBalances.token0,
-                unZapInfo.minToken0,
+                0,
                 unZapInfo.pathFromToken0,
                 address(this)
             );
@@ -307,7 +294,7 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
             _swap(
                 unZapInfo.router,
                 _getBalance(pair.token1) - initialBalances.token1,
-                unZapInfo.minToken1,
+                0,
                 unZapInfo.pathFromToken1,
                 address(this)
             );
