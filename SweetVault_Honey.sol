@@ -16,9 +16,9 @@
 
 pragma solidity 0.6.12;
 
-import "./SweetVault.sol";
+import "./SweetVault_v1.sol";
 
-contract SweetVault_Honey is SweetVault {
+contract SweetVault_Honey is SweetVault_v1 {
     constructor(
         address _autoPacoca,
         address _stakedToken,
@@ -35,7 +35,7 @@ contract SweetVault_Honey is SweetVault {
         address _platform,
         uint256 _buyBackRate,
         uint256 _platformFee
-    ) SweetVault(
+    ) SweetVault_v1(
         _autoPacoca,
         _stakedToken,
         _stakedTokenFarm,
