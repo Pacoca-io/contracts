@@ -20,13 +20,12 @@ import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPancakeRouter02.sol";
-import "./helpers/PeanutRouter.sol";
 import "./interfaces/IwNative.sol";
+import "./interfaces/IPeanutZap.sol";
+import "./helpers/PeanutRouter.sol";
 import "./helpers/ZapHelpers.sol";
 
-import "hardhat/console.sol";
-
-contract PeanutZap is OwnableUpgradeable, PeanutRouter, ZapHelpers {
+contract PeanutZap is IPeanutZap, OwnableUpgradeable, PeanutRouter, ZapHelpers {
     using SafeERC20 for IERC20;
 
     struct InitialBalances {
