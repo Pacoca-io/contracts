@@ -19,6 +19,12 @@ pragma solidity >=0.8.9;
 import "../interfaces/IPancakeRouter02.sol";
 
 interface IZapStructs {
+    struct InitialBalances {
+        uint token0;
+        uint token1;
+        uint inputToken;
+    }
+
     struct Pair {
         address token0;
         address token1;
@@ -37,5 +43,8 @@ interface IZapStructs {
         IPancakeRouter02 router;
         address[] pathFromToken0;
         address[] pathFromToken1;
+        address inputToken;
+        uint inputTokenAmount;
+        uint minOutputTokenAmount;
     }
 }

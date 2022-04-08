@@ -25,14 +25,8 @@ import "./interfaces/IPeanutZap.sol";
 import "./helpers/PeanutRouter.sol";
 import "./helpers/ZapHelpers.sol";
 
-contract PeanutZap is IPeanutZap, OwnableUpgradeable, PeanutRouter, ZapHelpers {
+contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
     using SafeERC20 for IERC20;
-
-    struct InitialBalances {
-        uint token0;
-        uint token1;
-        uint inputToken;
-    }
 
     address public treasury;
     IwNative public wNATIVE;
@@ -103,12 +97,12 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, PeanutRouter, ZapHelpers {
         uint swapInputAmount = (_getBalance(_inputToken) - _initialBalances.inputToken) / 2;
 
         if (_inputToken != _pair.token0)
-            _swap(_zapInfo.router, swapInputAmount, _zapInfo.minToken0, _zapInfo.pathToToken0, address(this));
+            PeanutRouter.swap(_zapInfo.router, swapInputAmount, _zapInfo.minToken0, _zapInfo.pathToToken0);
 
         if (_inputToken != _pair.token1)
-            _swap(_zapInfo.router, swapInputAmount, _zapInfo.minToken1, _zapInfo.pathToToken1, address(this));
+            PeanutRouter.swap(_zapInfo.router, swapInputAmount, _zapInfo.minToken1, _zapInfo.pathToToken1);
 
-        _addLiquidity(
+        PeanutRouter.addLiquidity(
             _zapInfo.router,
             _pair.token0,
             _pair.token1,
@@ -121,127 +115,71 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, PeanutRouter, ZapHelpers {
     }
 
     function unZapToken(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        address _outputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount
+        UnZapInfo calldata _unZapInfo,
+        address _outputToken
     ) external {
-        _unZapToken(
-            _unZapInfo,
-            _inputToken,
-            _outputToken,
-            _inputTokenAmount,
-            _minOutputTokenAmount
-        );
+        _unZapToken(_unZapInfo, _outputToken);
     }
 
     function unZapTokenWithPermit(
-        bytes calldata _unZapInfo,
-        address _inputToken,
+        UnZapInfo calldata _unZapInfo,
         address _outputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount,
         bytes calldata _signatureData
     ) external {
-        console.log('PeanutZap: %s', address(this));
-
         _approveUsingPermit(
-            _inputToken,
-            _inputTokenAmount,
+            _unZapInfo.inputToken,
+            _unZapInfo.inputTokenAmount,
             _signatureData
         );
 
-        _unZapToken(
-            _unZapInfo,
-            _inputToken,
-            _outputToken,
-            _inputTokenAmount,
-            _minOutputTokenAmount
-        );
+        _unZapToken(_unZapInfo, _outputToken);
     }
 
     function _unZapToken(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        address _outputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount
+        UnZapInfo calldata _unZapInfo,
+        address _outputToken
     ) private {
         uint initialOutputTokenBalance = _getBalance(_outputToken);
 
-        _unZap(
-            _unZapInfo,
-            _inputToken,
-            _outputToken,
-            _inputTokenAmount
-        );
+        _unZap(_unZapInfo, _outputToken);
 
         IERC20(_outputToken).safeTransfer(
             msg.sender,
             _calculateUnZapProfit(
                 initialOutputTokenBalance,
                 _getBalance(_outputToken),
-                _minOutputTokenAmount
+                _unZapInfo.minOutputTokenAmount
             )
         );
     }
 
-    function unZapNative(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount
-    ) external {
-        _unZapNative(
-            _unZapInfo,
-            _inputToken,
-            _inputTokenAmount,
-            _minOutputTokenAmount
-        );
+    function unZapNative(UnZapInfo calldata _unZapInfo) external {
+        _unZapNative(_unZapInfo);
     }
 
     function unZapNativeWithPermit(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount,
+        UnZapInfo calldata _unZapInfo,
         bytes calldata _signatureData
     ) external {
         _approveUsingPermit(
-            _inputToken,
-            _inputTokenAmount,
+            _unZapInfo.inputToken,
+            _unZapInfo.inputTokenAmount,
             _signatureData
         );
 
-        _unZapNative(
-            _unZapInfo,
-            _inputToken,
-            _inputTokenAmount,
-            _minOutputTokenAmount
-        );
+        _unZapNative(_unZapInfo);
     }
 
-    function _unZapNative(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount
-    ) private {
+    function _unZapNative(UnZapInfo calldata _unZapInfo) private {
         address outputToken = address(wNATIVE);
         uint initialOutputTokenBalance = _getBalance(outputToken);
 
-        _unZap(
-            _unZapInfo,
-            _inputToken,
-            outputToken,
-            _inputTokenAmount
-        );
+        _unZap(_unZapInfo, outputToken);
 
         uint profit = _calculateUnZapProfit(
             initialOutputTokenBalance,
             _getBalance(outputToken),
-            _minOutputTokenAmount
+            _unZapInfo.minOutputTokenAmount
         );
 
         wNATIVE.withdraw(profit);
@@ -250,59 +188,53 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, PeanutRouter, ZapHelpers {
     }
 
     function _unZap(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        address _outputToken,
-        uint _inputTokenAmount
-    ) public {
-        UnZapInfo memory unZapInfo = _decodeUnZapInfo(_unZapInfo);
-        Pair memory pair = _getPairInfo(_inputToken);
+        UnZapInfo calldata _unZapInfo,
+        address _outputToken
+    ) private {
+        Pair memory pair = _getPairInfo(_unZapInfo.inputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
             _getBalance(pair.token0),
             _getBalance(pair.token1),
-            _getBalance(_inputToken)
+            _getBalance(_unZapInfo.inputToken)
         );
 
-        IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _inputTokenAmount);
+        IERC20(_unZapInfo.inputToken).safeTransferFrom(msg.sender, address(this), _unZapInfo.inputTokenAmount);
 
-        // TODO support fee on transfer tokens
-        _removeLiquidity(
-            unZapInfo.router,
+        PeanutRouter.removeLiquidity(
+            _unZapInfo.router,
             pair.token0,
             pair.token1,
-            _inputToken,
-            _getBalance(_inputToken) - initialBalances.inputToken,
+            _unZapInfo.inputToken,
+            _getBalance(_unZapInfo.inputToken) - initialBalances.inputToken,
             0,
             0
         );
 
         if (_outputToken != pair.token0)
-            _swap(
-                unZapInfo.router,
+            PeanutRouter.swap(
+                _unZapInfo.router,
                 _getBalance(pair.token0) - initialBalances.token0,
                 0,
-                unZapInfo.pathFromToken0,
-                address(this)
+                _unZapInfo.pathFromToken0
             );
 
         if (_outputToken != pair.token1)
-            _swap(
-                unZapInfo.router,
+            PeanutRouter.swap(
+                _unZapInfo.router,
                 _getBalance(pair.token1) - initialBalances.token1,
                 0,
-                unZapInfo.pathFromToken1,
-                address(this)
+                _unZapInfo.pathFromToken1
             );
     }
 
-    function collectDust(address _token) public {
+    function collectDust(address _token) public onlyOwner {
         IERC20 token = IERC20(_token);
 
         token.safeTransfer(treasury, token.balanceOf(address(this)));
     }
 
-    function collectDustMultiple(address[] calldata _tokens) public {
+    function collectDustMultiple(address[] calldata _tokens) external onlyOwner {
         for (uint index = 0; index < _tokens.length; ++index) {
             collectDust(_tokens[index]);
         }

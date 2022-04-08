@@ -36,34 +36,22 @@ interface IPeanutZap is IZapStructs {
     ) external payable;
 
     function unZapToken(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        address _outputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount
+        UnZapInfo calldata _unZapInfo,
+        address _outputToken
     ) external;
 
     function unZapTokenWithPermit(
-        bytes calldata _unZapInfo,
-        address _inputToken,
+        UnZapInfo calldata _unZapInfo,
         address _outputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount,
         bytes calldata _signatureData
     ) external;
 
     function unZapNative(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount
+        UnZapInfo calldata _unZapInfo
     ) external;
 
     function unZapNativeWithPermit(
-        bytes calldata _unZapInfo,
-        address _inputToken,
-        uint _inputTokenAmount,
-        uint _minOutputTokenAmount,
+        UnZapInfo calldata _unZapInfo,
         bytes calldata _signatureData
     ) external;
 

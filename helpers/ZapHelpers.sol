@@ -67,25 +67,4 @@ contract ZapHelpers is IZapStructs {
 
         return profit;
     }
-
-    function _decodeUnZapInfo(
-        bytes calldata _zapInfo
-    ) internal pure returns (
-        UnZapInfo memory
-    ) {
-        (
-            IPancakeRouter02 router,
-            address[] memory pathFromToken0,
-            address[] memory pathFromToken1
-        ) = abi.decode(
-            _zapInfo,
-            (IPancakeRouter02, address[], address[])
-        );
-
-        return UnZapInfo(
-            router,
-            pathFromToken0,
-            pathFromToken1
-        );
-    }
 }
