@@ -63,7 +63,7 @@ contract SweetVault_v3 is ISweetVault, OwnableUpgradeable, ReentrancyGuardUpgrad
     address[] public pathToPacoca; // Path from staked token to PACOCA
     address[] public pathToWbnb; // Path from staked token to WBNB
 
-    IPeanutZap public zap;
+    address payable public zap;
 
     address public treasury;
     address public keeper;
@@ -119,7 +119,7 @@ contract SweetVault_v3 is ISweetVault, OwnableUpgradeable, ReentrancyGuardUpgrad
         pathToPacoca = _pathToPacoca;
         pathToWbnb = _pathToWbnb;
 
-        zap = IPeanutZap(_zap);
+        zap = _zap;
 
         earlyWithdrawFee = 100;
         platformFee = 550;
@@ -187,19 +187,32 @@ contract SweetVault_v3 is ISweetVault, OwnableUpgradeable, ReentrancyGuardUpgrad
     }
 
     function deposit(uint256 _amount) external nonReentrant {
-        _deposit(_amount);
-    }
-
-    function _deposit(uint256 _amount) private {
         require(_amount > 0, "SweetVault: amount must be greater than zero");
 
-        UserInfo storage user = userInfo[msg.sender];
-
-        _farmInfo.stakedToken.safeTransferFrom(
+        farmInfo.stakedToken.safeTransferFrom(
             address(msg.sender),
             address(this),
             _amount
         );
+
+        _deposit(_amount);
+    }
+
+    function zapAndDeposit(bytes calldata _zap) external payable nonReentrant {
+        FarmInfo memory _farmInfo = farmInfo;
+
+        uint initialBalance = _farmInfo.stakedToken.balanceOf(address(this));
+
+        (bool success,) = zap.call{value : msg.value}(_zap);
+
+        require(success, "SweetVault::zapAndDeposit: Zap Failed");
+
+        _deposit(_farmInfo.stakedToken.balanceOf(address(this)) - initialBalance);
+    }
+
+    function _deposit(uint256 _amount) private {
+        UserInfo storage user = userInfo[msg.sender];
+        FarmInfo memory _farmInfo = farmInfo;
 
         _approveTokenIfNeeded(
             _farmInfo.stakedToken,
