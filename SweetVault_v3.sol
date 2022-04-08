@@ -25,7 +25,7 @@ import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 import "hardhat/console.sol";
 
-contract SweetVault_Upgradeable is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
