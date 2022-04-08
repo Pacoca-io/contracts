@@ -23,8 +23,9 @@ import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 import "./interfaces/IPeanutZap.sol";
+import "./interfaces/ISweetVault.sol";
 
-contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract SweetVault_v3 is ISweetVault, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -38,20 +39,24 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 lastDepositedTime;
     }
 
+    struct FarmInfo {
+        IFarm farm;
+        uint256 pid;
+        IERC20 stakedToken;
+        IERC20 rewardToken;
+    }
+
     // Addresses
     address public constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     IERC20 public constant PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
     IPacocaVault public AUTO_PACOCA;
-    IERC20 public STAKED_TOKEN;
 
     // Runtime data
     mapping(address => UserInfo) public userInfo; // Info of users
     uint256 public accSharesPerStakedToken; // Accumulated AUTO_PACOCA shares per staked token, times 1e18.
 
     // Farm info
-    IFarm public STAKED_TOKEN_FARM;
-    IERC20 public FARM_REWARD_TOKEN;
-    uint256 public FARM_PID;
+    FarmInfo public farmInfo;
 
     // Settings
     IPancakeRouter02 public router;
@@ -87,37 +92,34 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function initialize(
         address _autoPacoca,
-        address _stakedToken,
-        address _stakedTokenFarm,
-        address _farmRewardToken,
-        uint256 _farmPid,
+        FarmInfo memory _farmInfo,
         address _router,
         address[] memory _pathToPacoca,
         address[] memory _pathToWbnb,
+        address payable _zap,
         address _owner,
         address _treasury,
         address _keeper,
         address _platform
     ) public initializer {
         require(
-            _pathToPacoca[0] == address(_farmRewardToken) && _pathToPacoca[_pathToPacoca.length - 1] == address(PACOCA),
+            _pathToPacoca[0] == address(_farmInfo.rewardToken) && _pathToPacoca[_pathToPacoca.length - 1] == address(PACOCA),
             "SweetVault: Incorrect path to PACOCA"
         );
 
         require(
-            _pathToWbnb[0] == address(_farmRewardToken) && _pathToWbnb[_pathToWbnb.length - 1] == WBNB,
+            _pathToWbnb[0] == address(_farmInfo.rewardToken) && _pathToWbnb[_pathToWbnb.length - 1] == WBNB,
             "SweetVault: Incorrect path to WBNB"
         );
 
         AUTO_PACOCA = IPacocaVault(_autoPacoca);
-        STAKED_TOKEN = IERC20(_stakedToken);
-        STAKED_TOKEN_FARM = IFarm(_stakedTokenFarm);
-        FARM_REWARD_TOKEN = IERC20(_farmRewardToken);
-        FARM_PID = _farmPid;
 
+        farmInfo = _farmInfo;
         router = IPancakeRouter02(_router);
         pathToPacoca = _pathToPacoca;
         pathToWbnb = _pathToWbnb;
+
+        zap = IPeanutZap(_zap);
 
         earlyWithdrawFee = 100;
         platformFee = 550;
@@ -147,7 +149,9 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _minPlatformOutput,
         uint256 _minPacocaOutput
     ) external virtual onlyKeeper {
-        STAKED_TOKEN_FARM.withdraw(FARM_PID, 0);
+        FarmInfo memory _farmInfo = farmInfo;
+
+        _farmInfo.farm.withdraw(_farmInfo.pid, 0);
 
         // Collect platform fees
         _swap(
@@ -191,16 +195,16 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         UserInfo storage user = userInfo[msg.sender];
 
-        STAKED_TOKEN.safeTransferFrom(
+        _farmInfo.stakedToken.safeTransferFrom(
             address(msg.sender),
             address(this),
             _amount
         );
 
         _approveTokenIfNeeded(
-            STAKED_TOKEN,
+            _farmInfo.stakedToken,
             _amount,
-            address(STAKED_TOKEN_FARM)
+            address(_farmInfo.farm)
         );
 
         _stake(_amount);
@@ -215,7 +219,7 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     // _stake function is removed from deposit so it can be overridden for different platforms
     function _stake(uint256 _amount) internal virtual {
-        STAKED_TOKEN_FARM.deposit(FARM_PID, _amount);
+        farmInfo.farm.deposit(farmInfo.pid, _amount);
     }
 
     function withdraw(uint256 _amount) external virtual nonReentrant {
@@ -224,14 +228,14 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(_amount > 0, "SweetVault: amount must be greater than zero");
         require(user.stake >= _amount, "SweetVault: withdraw amount exceeds balance");
 
-        STAKED_TOKEN_FARM.withdraw(FARM_PID, _amount);
+        farmInfo.farm.withdraw(farmInfo.pid, _amount);
 
         uint256 currentAmount = _amount;
 
         if (block.timestamp < user.lastDepositedTime + withdrawFeePeriod) {
             uint256 currentWithdrawFee = (currentAmount * earlyWithdrawFee) / 10000;
 
-            STAKED_TOKEN.safeTransfer(treasury, currentWithdrawFee);
+            farmInfo.stakedToken.safeTransfer(treasury, currentWithdrawFee);
 
             currentAmount = currentAmount - currentWithdrawFee;
 
@@ -247,7 +251,7 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             _claimRewards(user.autoPacocaShares, false);
         }
 
-        STAKED_TOKEN.safeTransfer(msg.sender, currentAmount);
+        farmInfo.stakedToken.safeTransfer(msg.sender, currentAmount);
 
         emit Withdraw(msg.sender, currentAmount);
     }
@@ -285,17 +289,16 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ) {
         uint256 wbnbOutput = _getExpectedOutput(pathToWbnb);
         uint256 pacocaOutputWithoutFees = _getExpectedOutput(pathToPacoca);
+        uint256 pacocaOutputFees = pacocaOutputWithoutFees * platformFee / 10000;
 
         platformOutput = wbnbOutput * platformFee / 10000;
-        pacocaOutput = pacocaOutputWithoutFees - (
-            pacocaOutputWithoutFees * platformFee / 10000
-        );
+        pacocaOutput = pacocaOutputWithoutFees - pacocaOutputFees;
     }
 
     function _getExpectedOutput(
         address[] memory _path
     ) internal virtual view returns (uint256) {
-        uint256 pending = STAKED_TOKEN_FARM.pendingCake(FARM_PID, address(this));
+        uint256 pending = farmInfo.farm.pendingCake(farmInfo.pid, address(this));
 
         uint256 rewards = _rewardTokenBalance() + pending;
 
@@ -335,7 +338,7 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function _rewardTokenBalance() internal view returns (uint256) {
-        return FARM_REWARD_TOKEN.balanceOf(address(this));
+        return farmInfo.rewardToken.balanceOf(address(this));
     }
 
     function _pacocaBalance() private view returns (uint256) {
@@ -343,7 +346,9 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function totalStake() public view returns (uint256) {
-        return STAKED_TOKEN_FARM.userInfo(FARM_PID, address(this));
+        FarmInfo memory _farmInfo = farmInfo;
+
+        return _farmInfo.farm.userInfo(_farmInfo.pid, address(this));
     }
 
     function totalAutoPacocaShares() public view returns (uint256) {
@@ -370,7 +375,7 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address _to
     ) internal virtual {
         _approveTokenIfNeeded(
-            FARM_REWARD_TOKEN,
+            farmInfo.rewardToken,
             _inputAmount,
             address(router)
         );
@@ -396,7 +401,7 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function setPathToPacoca(address[] memory _path) external onlyOwner {
         require(
-            _path[0] == address(FARM_REWARD_TOKEN) && _path[_path.length - 1] == address(PACOCA),
+            _path[0] == address(farmInfo.rewardToken) && _path[_path.length - 1] == address(PACOCA),
             "SweetVault: Incorrect path to PACOCA"
         );
 
@@ -409,7 +414,7 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function setPathToWbnb(address[] memory _path) external onlyOwner {
         require(
-            _path[0] == address(FARM_REWARD_TOKEN) && _path[_path.length - 1] == WBNB,
+            _path[0] == address(farmInfo.rewardToken) && _path[_path.length - 1] == WBNB,
             "SweetVault: Incorrect path to WBNB"
         );
 
