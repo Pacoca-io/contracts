@@ -14,19 +14,17 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
-import "hardhat/console.sol";
+import "./interfaces/IPeanutZap.sol";
 
 contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -54,12 +52,13 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     IFarm public STAKED_TOKEN_FARM;
     IERC20 public FARM_REWARD_TOKEN;
     uint256 public FARM_PID;
-    bool public IS_BISWAP;
 
     // Settings
     IPancakeRouter02 public router;
     address[] public pathToPacoca; // Path from staked token to PACOCA
     address[] public pathToWbnb; // Path from staked token to WBNB
+
+    IPeanutZap public zap;
 
     address public treasury;
     address public keeper;
@@ -115,7 +114,6 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         STAKED_TOKEN_FARM = IFarm(_stakedTokenFarm);
         FARM_REWARD_TOKEN = IERC20(_farmRewardToken);
         FARM_PID = _farmPid;
-        IS_BISWAP = _stakedTokenFarm == 0xDbc1A13490deeF9c3C12b44FE77b503c1B061739;
 
         router = IPancakeRouter02(_router);
         pathToPacoca = _pathToPacoca;
@@ -153,7 +151,7 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // Collect platform fees
         _swap(
-            _rewardTokenBalance().mul(platformFee).div(10000),
+            _rewardTokenBalance() * platformFee / 10000,
             _minPlatformOutput,
             pathToWbnb,
             platform
@@ -179,13 +177,16 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         AUTO_PACOCA.deposit(pacocaBalance);
 
         uint256 currentShares = totalAutoPacocaShares();
+        uint256 newShares = currentShares - previousShares;
 
-        accSharesPerStakedToken = accSharesPerStakedToken.add(
-            currentShares.sub(previousShares).mul(1e18).div(totalStake())
-        );
+        accSharesPerStakedToken = accSharesPerStakedToken + (newShares * 1e18 / totalStake());
     }
 
-    function deposit(uint256 _amount) external virtual nonReentrant {
+    function deposit(uint256 _amount) external nonReentrant {
+        _deposit(_amount);
+    }
+
+    function _deposit(uint256 _amount) private {
         require(_amount > 0, "SweetVault: amount must be greater than zero");
 
         UserInfo storage user = userInfo[msg.sender];
@@ -202,21 +203,18 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             address(STAKED_TOKEN_FARM)
         );
 
-        _deposit(_amount);
+        _stake(_amount);
 
-        user.autoPacocaShares = user.autoPacocaShares.add(
-            user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
-                user.rewardDebt
-            )
-        );
-        user.stake = user.stake.add(_amount);
-        user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
+        _updateAutoPacocaShares(user);
+        user.stake = user.stake + _amount;
+        _updateRewardDebt(user);
         user.lastDepositedTime = block.timestamp;
 
         emit Deposit(msg.sender, _amount);
     }
 
-    function _deposit(uint256 _amount) internal virtual {
+    // _stake function is removed from deposit so it can be overridden for different platforms
+    function _stake(uint256 _amount) internal virtual {
         STAKED_TOKEN_FARM.deposit(FARM_PID, _amount);
     }
 
@@ -230,23 +228,19 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uint256 currentAmount = _amount;
 
-        if (block.timestamp < user.lastDepositedTime.add(withdrawFeePeriod)) {
-            uint256 currentWithdrawFee = currentAmount.mul(earlyWithdrawFee).div(10000);
+        if (block.timestamp < user.lastDepositedTime + withdrawFeePeriod) {
+            uint256 currentWithdrawFee = (currentAmount * earlyWithdrawFee) / 10000;
 
             STAKED_TOKEN.safeTransfer(treasury, currentWithdrawFee);
 
-            currentAmount = currentAmount.sub(currentWithdrawFee);
+            currentAmount = currentAmount - currentWithdrawFee;
 
             emit EarlyWithdraw(msg.sender, _amount, currentWithdrawFee);
         }
 
-        user.autoPacocaShares = user.autoPacocaShares.add(
-            user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
-                user.rewardDebt
-            )
-        );
-        user.stake = user.stake.sub(_amount);
-        user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
+        _updateAutoPacocaShares(user);
+        user.stake = user.stake - _amount;
+        _updateRewardDebt(user);
 
         // Withdraw pacoca rewards if user leaves
         if (user.stake == 0 && user.autoPacocaShares > 0) {
@@ -266,24 +260,19 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         UserInfo storage user = userInfo[msg.sender];
 
         if (_update) {
-            user.autoPacocaShares = user.autoPacocaShares.add(
-                user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
-                    user.rewardDebt
-                )
-            );
-
-            user.rewardDebt = user.stake.mul(accSharesPerStakedToken).div(1e18);
+            _updateAutoPacocaShares(user);
+            _updateRewardDebt(user);
         }
 
         require(user.autoPacocaShares >= _shares, "SweetVault: claim amount exceeds balance");
 
-        user.autoPacocaShares = user.autoPacocaShares.sub(_shares);
+        user.autoPacocaShares = user.autoPacocaShares - _shares;
 
         uint256 pacocaBalanceBefore = _pacocaBalance();
 
         AUTO_PACOCA.withdraw(_shares);
 
-        uint256 withdrawAmount = _pacocaBalance().sub(pacocaBalanceBefore);
+        uint256 withdrawAmount = _pacocaBalance() - pacocaBalanceBefore;
 
         _safePACOCATransfer(msg.sender, withdrawAmount);
 
@@ -297,24 +286,18 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 wbnbOutput = _getExpectedOutput(pathToWbnb);
         uint256 pacocaOutputWithoutFees = _getExpectedOutput(pathToPacoca);
 
-        platformOutput = wbnbOutput.mul(platformFee).div(10000);
-        pacocaOutput = pacocaOutputWithoutFees.sub(
-            pacocaOutputWithoutFees.mul(platformFee).div(10000)
+        platformOutput = wbnbOutput * platformFee / 10000;
+        pacocaOutput = pacocaOutputWithoutFees - (
+            pacocaOutputWithoutFees * platformFee / 10000
         );
     }
 
     function _getExpectedOutput(
         address[] memory _path
     ) internal virtual view returns (uint256) {
-        uint256 pending;
+        uint256 pending = STAKED_TOKEN_FARM.pendingCake(FARM_PID, address(this));
 
-        if (IS_BISWAP) {
-            pending = STAKED_TOKEN_FARM.pendingBSW(FARM_PID, address(this));
-        } else {
-            pending = STAKED_TOKEN_FARM.pendingCake(FARM_PID, address(this));
-        }
-
-        uint256 rewards = _rewardTokenBalance().add(pending);
+        uint256 rewards = _rewardTokenBalance() + pending;
 
         if (rewards == 0) {
             return 0;
@@ -322,7 +305,7 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uint256[] memory amounts = router.getAmountsOut(rewards, _path);
 
-        return amounts[amounts.length.sub(1)];
+        return amounts[amounts.length - 1];
     }
 
     function balanceOf(
@@ -334,13 +317,11 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ) {
         UserInfo memory user = userInfo[_user];
 
-        uint256 pendingShares = user.stake.mul(accSharesPerStakedToken).div(1e18).sub(
-            user.rewardDebt
-        );
+        uint256 pendingShares = (user.stake * accSharesPerStakedToken / 1e18) - user.rewardDebt;
 
         stake = user.stake;
-        autoPacocaShares = user.autoPacocaShares.add(pendingShares);
-        pacoca = autoPacocaShares.mul(AUTO_PACOCA.getPricePerFullShare()).div(1e18);
+        autoPacocaShares = user.autoPacocaShares + pendingShares;
+        pacoca = autoPacocaShares * AUTO_PACOCA.getPricePerFullShare() / 1e18;
     }
 
     function _approveTokenIfNeeded(
@@ -401,6 +382,16 @@ contract SweetVault_v3 is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             _to,
             block.timestamp
         );
+    }
+
+    function _updateAutoPacocaShares(UserInfo storage _user) private {
+        uint totalSharesEarned = (_user.stake * accSharesPerStakedToken) / 1e18;
+
+        _user.autoPacocaShares = _user.autoPacocaShares + totalSharesEarned - _user.rewardDebt;
+    }
+
+    function _updateRewardDebt(UserInfo storage _user) private {
+        _user.rewardDebt = (_user.stake * accSharesPerStakedToken) / 1e18;
     }
 
     function setPathToPacoca(address[] memory _path) external onlyOwner {
