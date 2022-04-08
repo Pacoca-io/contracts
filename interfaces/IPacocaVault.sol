@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity >=0.6.12;
 
 interface IPacocaVault {
     event Deposit(address indexed sender, uint256 amount, uint256 shares, uint256 lastDepositedTime);
