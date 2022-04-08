@@ -23,7 +23,7 @@ import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 
-contract SweetVault is Ownable, ReentrancyGuard {
+contract SweetVault_v1 is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
