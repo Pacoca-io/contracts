@@ -16,7 +16,9 @@
 
 pragma solidity >=0.8.9;
 
-interface IPeanutZap {
+import "../interfaces/IZapStructs.sol";
+
+interface IPeanutZap is IZapStructs {
     function initialize(
         address _treasury,
         address _owner,
@@ -24,15 +26,13 @@ interface IPeanutZap {
     ) external;
 
     function zapToken(
-        bytes calldata _zapInfo,
+        ZapInfo calldata _zapInfo,
         address _inputToken,
-        address _outputToken,
         uint _inputTokenAmount
     ) external;
 
     function zapNative(
-        bytes calldata _zapInfo,
-        address _outputToken
+        ZapInfo calldata _zapInfo
     ) external payable;
 
     function unZapToken(

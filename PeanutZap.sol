@@ -50,12 +50,11 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, PeanutRouter, ZapHelpers {
     }
 
     function zapToken(
-        bytes calldata _zapInfo,
+        ZapInfo calldata _zapInfo,
         address _inputToken,
-        address _outputToken,
         uint _inputTokenAmount
     ) public {
-        Pair memory pair = _getPairInfo(_outputToken);
+        Pair memory pair = _getPairInfo(_zapInfo.outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
             _getBalance(pair.token0),
@@ -74,10 +73,9 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, PeanutRouter, ZapHelpers {
     }
 
     function zapNative(
-        bytes calldata _zapInfo,
-        address _outputToken
+        ZapInfo calldata _zapInfo
     ) external payable {
-        Pair memory pair = _getPairInfo(_outputToken);
+        Pair memory pair = _getPairInfo(_zapInfo.outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
             _getBalance(pair.token0),
@@ -97,28 +95,27 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, PeanutRouter, ZapHelpers {
     }
 
     function _zap(
-        bytes calldata _zapInfo,
+        ZapInfo calldata _zapInfo,
         address _inputToken,
         Pair memory _pair,
         InitialBalances memory _initialBalances
     ) private {
-        ZapInfo memory zapInfo = _decodeZapInfo(_zapInfo);
         uint swapInputAmount = (_getBalance(_inputToken) - _initialBalances.inputToken) / 2;
 
         if (_inputToken != _pair.token0)
-            _swap(IPancakeRouter02(zapInfo.router), swapInputAmount, zapInfo.minToken0, zapInfo.pathToToken0, address(this));
+            _swap(_zapInfo.router, swapInputAmount, _zapInfo.minToken0, _zapInfo.pathToToken0, address(this));
 
         if (_inputToken != _pair.token1)
-            _swap(IPancakeRouter02(zapInfo.router), swapInputAmount, zapInfo.minToken1, zapInfo.pathToToken1, address(this));
+            _swap(_zapInfo.router, swapInputAmount, _zapInfo.minToken1, _zapInfo.pathToToken1, address(this));
 
         _addLiquidity(
-            IPancakeRouter02(zapInfo.router),
+            _zapInfo.router,
             _pair.token0,
             _pair.token1,
             _getBalance(_pair.token0) - _initialBalances.token0,
             _getBalance(_pair.token1) - _initialBalances.token1,
-            zapInfo.minToken0,
-            zapInfo.minToken1,
+            _zapInfo.minToken0,
+            _zapInfo.minToken1,
             msg.sender
         );
     }
