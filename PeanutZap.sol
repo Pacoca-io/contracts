@@ -35,7 +35,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         address _treasury,
         address _owner,
         address _wNative
-    ) public initializer {
+    ) external initializer {
         __Ownable_init();
         transferOwnership(_owner);
 
@@ -47,7 +47,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         ZapInfo calldata _zapInfo,
         address _inputToken,
         uint _inputTokenAmount
-    ) public {
+    ) external {
         Pair memory pair = _getPairInfo(_zapInfo.outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
