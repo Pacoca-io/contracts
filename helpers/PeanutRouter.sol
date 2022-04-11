@@ -80,8 +80,8 @@ library PeanutRouter {
             _token0,
             _token1,
             _liquidity,
-            _minOut0, // TODO maybe care about output amounts
-            _minOut1, // TODO maybe care about output amounts
+            _minOut0,
+            _minOut1,
             address(this),
             block.timestamp
         );

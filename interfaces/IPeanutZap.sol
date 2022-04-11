@@ -55,6 +55,10 @@ interface IPeanutZap is IZapStructs {
         bytes calldata _signatureData
     ) external;
 
+    function zapPair(
+        ZapPairInfo calldata _zapPairInfo
+    ) external;
+
     function collectDust(
         address _token
     ) external;

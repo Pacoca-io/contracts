@@ -77,7 +77,6 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
             _getBalance(address(wNATIVE))
         );
 
-        // TODO check if this throws or returns false in case of .deposit() failing
         wNATIVE.deposit{value : msg.value}();
 
         _zap(
@@ -88,12 +87,15 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         );
     }
 
+    // TODO reentrancy guard
     function _zap(
         ZapInfo calldata _zapInfo,
         address _inputToken,
         Pair memory _pair,
         InitialBalances memory _initialBalances
     ) private {
+        require(_zapInfo.pathToToken0[0] == _zapInfo.pathToToken1[0], "Zap:: Invalid paths");
+
         uint swapInputAmount = (_getBalance(_inputToken) - _initialBalances.inputToken) / 2;
 
         if (_inputToken != _pair.token0)
@@ -193,28 +195,17 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
     ) private {
         Pair memory pair = _getPairInfo(_unZapInfo.inputToken);
 
-        InitialBalances memory initialBalances = InitialBalances(
-            _getBalance(pair.token0),
-            _getBalance(pair.token1),
-            _getBalance(_unZapInfo.inputToken)
-        );
-
-        IERC20(_unZapInfo.inputToken).safeTransferFrom(msg.sender, address(this), _unZapInfo.inputTokenAmount);
-
-        PeanutRouter.removeLiquidity(
+        (uint amount0, uint amount1) = _removeLiquidity(
+            pair,
             _unZapInfo.router,
-            pair.token0,
-            pair.token1,
             _unZapInfo.inputToken,
-            _getBalance(_unZapInfo.inputToken) - initialBalances.inputToken,
-            0,
-            0
+            _unZapInfo.inputTokenAmount
         );
 
         if (_outputToken != pair.token0)
             PeanutRouter.swap(
                 _unZapInfo.router,
-                _getBalance(pair.token0) - initialBalances.token0,
+                amount0,
                 0,
                 _unZapInfo.pathFromToken0
             );
@@ -222,10 +213,99 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         if (_outputToken != pair.token1)
             PeanutRouter.swap(
                 _unZapInfo.router,
-                _getBalance(pair.token1) - initialBalances.token1,
+                amount1,
                 0,
                 _unZapInfo.pathFromToken1
             );
+    }
+
+    function _removeLiquidity(
+        Pair memory _pair,
+        IPancakeRouter02 _router,
+        address _inputToken,
+        uint _inputTokenAmount
+    ) private returns (
+        uint amount0,
+        uint amount1
+    ) {
+        InitialBalances memory initialBalances = InitialBalances(
+            _getBalance(_pair.token0),
+            _getBalance(_pair.token1),
+            _getBalance(_inputToken)
+        );
+
+        IERC20(_inputToken).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _inputTokenAmount
+        );
+
+        PeanutRouter.removeLiquidity(
+            _router,
+            _pair.token0,
+            _pair.token1,
+            _inputToken,
+            _getBalance(_inputToken) - initialBalances.inputToken,
+            0,
+            0
+        );
+
+        amount0 = _getBalance(_pair.token0) - initialBalances.token0;
+        amount1 = _getBalance(_pair.token1) - initialBalances.token1;
+    }
+
+    function zapPair(ZapPairInfo calldata _zapPairInfo) external {
+        Pair memory inputPair = _getPairInfo(_zapPairInfo.inputToken);
+        Pair memory outputPair = _getPairInfo(_zapPairInfo.outputToken);
+
+        uint initialBalanceTokenA = _getBalance(outputPair.token0);
+        uint initialBalanceTokenB = _getBalance(outputPair.token1);
+
+        (uint amount0, uint amount1) = _removeLiquidity(
+            inputPair,
+            _zapPairInfo.routerIn,
+            _zapPairInfo.inputToken,
+            _zapPairInfo.inputTokenAmount
+        );
+
+        if (_zapPairInfo.pathFromToken0.length > 0) {
+            require(
+                _zapPairInfo.pathFromToken0[0] == inputPair.token0,
+                "zapPair::Invalid pathFromToken0"
+            );
+
+            PeanutRouter.swap(
+                _zapPairInfo.routerSwap,
+                amount0,
+                0,
+                _zapPairInfo.pathFromToken0
+            );
+        }
+
+        if (_zapPairInfo.pathFromToken1.length > 0) {
+            require(
+                _zapPairInfo.pathFromToken1[0] == inputPair.token1,
+                "zapPair::Invalid pathFromToken1"
+            );
+
+            PeanutRouter.swap(
+                _zapPairInfo.routerSwap,
+                amount1,
+                0,
+                _zapPairInfo.pathFromToken1
+            );
+        }
+
+        PeanutRouter.addLiquidity(
+            _zapPairInfo.routerOut,
+            outputPair.token0,
+            outputPair.token1,
+            _getBalance(outputPair.token0) - initialBalanceTokenA,
+            _getBalance(outputPair.token1) - initialBalanceTokenB,
+            _zapPairInfo.minTokenA,
+            _zapPairInfo.minTokenB,
+            msg.sender
+        );
     }
 
     function collectDust(address _token) public onlyOwner {

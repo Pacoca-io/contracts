@@ -47,4 +47,17 @@ interface IZapStructs {
         uint inputTokenAmount;
         uint minOutputTokenAmount;
     }
+
+    struct ZapPairInfo {
+        IPancakeRouter02 routerSwap;
+        IPancakeRouter02 routerIn;
+        IPancakeRouter02 routerOut;
+        address[] pathFromToken0; // (token0 of inputToken)
+        address[] pathFromToken1; // (token1 of inputToken)
+        address inputToken;
+        address outputToken;
+        uint inputTokenAmount;
+        uint minTokenA;
+        uint minTokenB;
+    }
 }
