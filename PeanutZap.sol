@@ -18,6 +18,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IwNative.sol";
@@ -25,7 +26,7 @@ import "./interfaces/IPeanutZap.sol";
 import "./helpers/PeanutRouter.sol";
 import "./helpers/ZapHelpers.sol";
 
-contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
+contract PeanutZap is IPeanutZap, OwnableUpgradeable, ReentrancyGuardUpgradeable, ZapHelpers {
     using SafeERC20 for IERC20;
 
     address public treasury;
@@ -36,6 +37,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         address _owner,
         address _wNative
     ) external initializer {
+        __ReentrancyGuard_init();
         __Ownable_init();
         transferOwnership(_owner);
 
@@ -47,7 +49,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         ZapInfo calldata _zapInfo,
         address _inputToken,
         uint _inputTokenAmount
-    ) external {
+    ) external nonReentrant {
         Pair memory pair = _getPairInfo(_zapInfo.outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
@@ -68,7 +70,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
 
     function zapNative(
         ZapInfo calldata _zapInfo
-    ) external payable {
+    ) external payable nonReentrant {
         Pair memory pair = _getPairInfo(_zapInfo.outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
@@ -119,7 +121,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
     function unZapToken(
         UnZapInfo calldata _unZapInfo,
         address _outputToken
-    ) external {
+    ) external nonReentrant {
         _unZapToken(_unZapInfo, _outputToken);
     }
 
@@ -127,7 +129,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         UnZapInfo calldata _unZapInfo,
         address _outputToken,
         bytes calldata _signatureData
-    ) external {
+    ) external nonReentrant {
         _approveUsingPermit(
             _unZapInfo.inputToken,
             _unZapInfo.inputTokenAmount,
@@ -155,14 +157,14 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         );
     }
 
-    function unZapNative(UnZapInfo calldata _unZapInfo) external {
+    function unZapNative(UnZapInfo calldata _unZapInfo) external nonReentrant {
         _unZapNative(_unZapInfo);
     }
 
     function unZapNativeWithPermit(
         UnZapInfo calldata _unZapInfo,
         bytes calldata _signatureData
-    ) external {
+    ) external nonReentrant {
         _approveUsingPermit(
             _unZapInfo.inputToken,
             _unZapInfo.inputTokenAmount,
@@ -254,7 +256,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ZapHelpers {
         amount1 = _getBalance(_pair.token1) - initialBalances.token1;
     }
 
-    function zapPair(ZapPairInfo calldata _zapPairInfo) external {
+    function zapPair(ZapPairInfo calldata _zapPairInfo) external nonReentrant {
         Pair memory inputPair = _getPairInfo(_zapPairInfo.inputToken);
         Pair memory outputPair = _getPairInfo(_zapPairInfo.outputToken);
 
