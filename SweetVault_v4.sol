@@ -25,7 +25,7 @@ import "./interfaces/IPacocaVault.sol";
 import "./interfaces/IPeanutZap.sol";
 import "./interfaces/ISweetVault.sol";
 
-contract SweetVault_v4 is ISweetVault, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -198,14 +198,34 @@ contract SweetVault_v4 is ISweetVault, OwnableUpgradeable, ReentrancyGuardUpgrad
         _deposit(_amount);
     }
 
-    function zapAndDeposit(bytes calldata _zap) external payable nonReentrant {
+    function zapAndDeposit(
+        ZapInfo calldata _zapInfo,
+        address _inputToken,
+        uint _inputTokenAmount
+    ) external payable nonReentrant {
         FarmInfo memory _farmInfo = farmInfo;
 
         uint initialBalance = _farmInfo.stakedToken.balanceOf(address(this));
 
-        (bool success,) = zap.call{value : msg.value}(_zap);
+        if (_inputToken == address(0)) {
+            IPeanutZap(zap).zapNative{value : msg.value}(
+                _zapInfo
+            );
+        } else {
+            farmInfo.stakedToken.safeTransferFrom(
+                address(msg.sender),
+                address(this),
+                _inputTokenAmount
+            );
 
-        require(success, "SweetVault::zapAndDeposit: Zap Failed");
+            _farmInfo.stakedToken.approve(zap, _inputTokenAmount);
+
+            IPeanutZap(zap).zapToken(
+                _zapInfo,
+                _inputToken,
+                _inputTokenAmount
+            );
+        }
 
         _deposit(_farmInfo.stakedToken.balanceOf(address(this)) - initialBalance);
     }
