@@ -32,23 +32,6 @@ contract ZapHelpers is IZapStructs {
         return Pair(pair.token0(), pair.token1());
     }
 
-    function _approveUsingPermit(
-        address _token,
-        uint _inputTokenAmount,
-        bytes calldata _signatureData
-    ) internal {
-        (uint8 v, bytes32 r, bytes32 s, uint deadline) = abi.decode(_signatureData, (uint8, bytes32, bytes32, uint));
-        IPancakePair(_token).permit(
-            msg.sender,
-            address(this),
-            _inputTokenAmount,
-            deadline,
-            v,
-            r,
-            s
-        );
-    }
-
     function _getBalance(address _token) internal view returns (uint) {
         return IERC20(_token).balanceOf(address(this));
     }

@@ -25,6 +25,7 @@ import "./interfaces/IwNative.sol";
 import "./interfaces/IPeanutZap.sol";
 import "./helpers/PeanutRouter.sol";
 import "./helpers/ZapHelpers.sol";
+import "./helpers/Permit.sol";
 
 contract PeanutZap is IPeanutZap, OwnableUpgradeable, ReentrancyGuardUpgradeable, ZapHelpers {
     using SafeERC20 for IERC20;
@@ -130,7 +131,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ReentrancyGuardUpgradeable
         address _outputToken,
         bytes calldata _signatureData
     ) external nonReentrant {
-        _approveUsingPermit(
+        Permit.approve(
             _unZapInfo.inputToken,
             _unZapInfo.inputTokenAmount,
             _signatureData
@@ -165,7 +166,7 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ReentrancyGuardUpgradeable
         UnZapInfo calldata _unZapInfo,
         bytes calldata _signatureData
     ) external nonReentrant {
-        _approveUsingPermit(
+        Permit.approve(
             _unZapInfo.inputToken,
             _unZapInfo.inputTokenAmount,
             _signatureData

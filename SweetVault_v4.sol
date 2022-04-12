@@ -24,6 +24,7 @@ import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 import "./interfaces/IPeanutZap.sol";
 import "./interfaces/ISweetVault.sol";
+import "./helpers/Permit.sol";
 
 contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
@@ -39,6 +40,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, Reentran
         uint256 lastDepositedTime;
     }
 
+    // TODO use native types
     struct FarmInfo {
         IFarm farm;
         uint256 pid;
@@ -228,6 +230,41 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, Reentran
         }
 
         _deposit(_farmInfo.stakedToken.balanceOf(address(this)) - initialBalance);
+    }
+
+    function zapPairWithPermitAndDeposit(
+        ZapPairInfo calldata _zapPairInfo,
+        bytes calldata _signature
+    ) external payable nonReentrant {
+        FarmInfo memory _farmInfo = farmInfo;
+
+        require(
+            _zapPairInfo.outputToken == address(_farmInfo.stakedToken),
+            "zapPairWithPermitAndDeposit::Wrong output token"
+        );
+
+        uint inputPairInitialBalance = IERC20(_zapPairInfo.inputToken).balanceOf(address(this));
+        uint outputPairInitialBalance = IERC20(_zapPairInfo.outputToken).balanceOf(address(this));
+
+        Permit.approve(
+            _zapPairInfo.inputToken,
+            _zapPairInfo.inputTokenAmount,
+            _signature
+        );
+
+        IERC20(_zapPairInfo.inputToken).safeTransferFrom(
+            address(msg.sender),
+            address(this),
+            _zapPairInfo.inputTokenAmount
+        );
+
+        uint inputPairProfit = IERC20(_zapPairInfo.inputToken).balanceOf(address(this)) - inputPairInitialBalance;
+
+        IERC20(_zapPairInfo.inputToken).safeIncreaseAllowance(zap, inputPairProfit);
+
+        IPeanutZap(zap).zapPair(_zapPairInfo);
+
+        _deposit(IERC20(_zapPairInfo.outputToken).balanceOf(address(this)) - outputPairInitialBalance);
     }
 
     function _deposit(uint256 _amount) private {
