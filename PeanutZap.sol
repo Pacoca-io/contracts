@@ -18,6 +18,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPancakeRouter02.sol";
@@ -27,7 +28,7 @@ import "./helpers/PeanutRouter.sol";
 import "./helpers/ZapHelpers.sol";
 import "./helpers/Permit.sol";
 
-contract PeanutZap is IPeanutZap, OwnableUpgradeable, ReentrancyGuardUpgradeable, ZapHelpers {
+contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, ZapHelpers {
     using SafeERC20 for IERC20;
 
     address public treasury;
@@ -328,4 +329,6 @@ contract PeanutZap is IPeanutZap, OwnableUpgradeable, ReentrancyGuardUpgradeable
     }
 
     receive() external payable {}
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }
