@@ -94,8 +94,8 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
     event SetEarlyWithdrawFee(uint256 oldEarlyWithdrawFee, uint256 newEarlyWithdrawFee);
 
     function initialize(
-        address _autoPacoca,
         FarmInfo memory _farmInfo,
+        address _autoPacoca,
         address _router,
         address[] memory _pathToPacoca,
         address[] memory _pathToWbnb,
@@ -348,7 +348,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
 
         AUTO_PACOCA.withdraw(_shares);
 
-        uint256 withdrawAmount =  _currentBalance(PACOCA) - pacocaBalanceBefore;
+        uint256 withdrawAmount = _currentBalance(PACOCA) - pacocaBalanceBefore;
 
         _safePACOCATransfer(msg.sender, withdrawAmount);
 
