@@ -39,7 +39,7 @@ abstract contract AccessControlled is Initializable {
         _;
     }
 
-    function setAuthority(IAuthority _newAuthority) external requireRole(IAuthority.Role.DAO) {
+    function setAuthority(IAuthority _newAuthority) external requireRole(IAuthority.Role.OWNER) {
         authority = _newAuthority;
 
         emit AuthorityUpdated(_newAuthority);
