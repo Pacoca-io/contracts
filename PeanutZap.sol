@@ -20,7 +20,7 @@ import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IwNative.sol";
 import "./interfaces/IPeanutZap.sol";
@@ -29,7 +29,7 @@ import "./helpers/ZapHelpers.sol";
 import "./helpers/Permit.sol";
 
 contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, ZapHelpers {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public treasury;
     IwNative public wNATIVE;
@@ -60,7 +60,7 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
             _getBalance(_inputToken)
         );
 
-        IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _inputTokenAmount);
+        IERC20Upgradeable(_inputToken).safeTransferFrom(msg.sender, address(this), _inputTokenAmount);
 
         _zap(
             _zapInfo,
@@ -149,7 +149,7 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
 
         _unZap(_unZapInfo, _outputToken);
 
-        IERC20(_outputToken).safeTransfer(
+        IERC20Upgradeable(_outputToken).safeTransfer(
             msg.sender,
             _calculateUnZapProfit(
                 initialOutputTokenBalance,
@@ -238,7 +238,7 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
             _getBalance(_inputToken)
         );
 
-        IERC20(_inputToken).safeTransferFrom(
+        IERC20Upgradeable(_inputToken).safeTransferFrom(
             msg.sender,
             address(this),
             _inputTokenAmount
@@ -313,7 +313,7 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
     }
 
     function collectDust(address _token) public onlyOwner {
-        IERC20 token = IERC20(_token);
+        IERC20Upgradeable token = IERC20Upgradeable(_token);
 
         token.safeTransfer(treasury, token.balanceOf(address(this)));
     }

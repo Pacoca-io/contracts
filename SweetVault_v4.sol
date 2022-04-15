@@ -19,6 +19,8 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
@@ -26,8 +28,8 @@ import "./interfaces/IPeanutZap.sol";
 import "./interfaces/ISweetVault.sol";
 import "./helpers/Permit.sol";
 
-contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    using SafeERC20 for IERC20;
+contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct UserInfo {
         // How many assets the user has provided.
@@ -44,13 +46,13 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, Reentran
     struct FarmInfo {
         IFarm farm;
         uint256 pid;
-        IERC20 stakedToken;
-        IERC20 rewardToken;
+        IERC20Upgradeable stakedToken;
+        IERC20Upgradeable rewardToken;
     }
 
     // Addresses
     address public constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    IERC20 public constant PACOCA = IERC20(0x55671114d774ee99D653D6C12460c780a67f1D18);
+    IERC20Upgradeable public constant PACOCA = IERC20Upgradeable(0x55671114d774ee99D653D6C12460c780a67f1D18);
     IPacocaVault public AUTO_PACOCA;
 
     // Runtime data
@@ -243,8 +245,8 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, Reentran
             "zapPairWithPermitAndDeposit::Wrong output token"
         );
 
-        uint inputPairInitialBalance = IERC20(_zapPairInfo.inputToken).balanceOf(address(this));
-        uint outputPairInitialBalance = IERC20(_zapPairInfo.outputToken).balanceOf(address(this));
+        uint inputPairInitialBalance = IERC20Upgradeable(_zapPairInfo.inputToken).balanceOf(address(this));
+        uint outputPairInitialBalance = IERC20Upgradeable(_zapPairInfo.outputToken).balanceOf(address(this));
 
         Permit.approve(
             _zapPairInfo.inputToken,
@@ -252,19 +254,19 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, Reentran
             _signature
         );
 
-        IERC20(_zapPairInfo.inputToken).safeTransferFrom(
+        IERC20Upgradeable(_zapPairInfo.inputToken).safeTransferFrom(
             address(msg.sender),
             address(this),
             _zapPairInfo.inputTokenAmount
         );
 
-        uint inputPairProfit = IERC20(_zapPairInfo.inputToken).balanceOf(address(this)) - inputPairInitialBalance;
+        uint inputPairProfit = IERC20Upgradeable(_zapPairInfo.inputToken).balanceOf(address(this)) - inputPairInitialBalance;
 
-        IERC20(_zapPairInfo.inputToken).safeIncreaseAllowance(zap, inputPairProfit);
+        IERC20Upgradeable(_zapPairInfo.inputToken).safeIncreaseAllowance(zap, inputPairProfit);
 
         IPeanutZap(zap).zapPair(_zapPairInfo);
 
-        _deposit(IERC20(_zapPairInfo.outputToken).balanceOf(address(this)) - outputPairInitialBalance);
+        _deposit(IERC20Upgradeable(_zapPairInfo.outputToken).balanceOf(address(this)) - outputPairInitialBalance);
     }
 
     function _deposit(uint256 _amount) private {
@@ -398,7 +400,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, Reentran
     }
 
     function _approveTokenIfNeeded(
-        IERC20 _token,
+        IERC20Upgradeable _token,
         uint256 _amount,
         address _spender
     ) internal {
@@ -541,4 +543,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, OwnableUpgradeable, Reentran
 
         emit SetEarlyWithdrawFee(oldEarlyWithdrawFee, earlyWithdrawFee);
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

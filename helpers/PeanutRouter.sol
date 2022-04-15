@@ -18,9 +18,10 @@ pragma solidity 0.8.9;
 
 import "../interfaces/IPancakeRouter02.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 library PeanutRouter {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     function swap(
         IPancakeRouter02 _router,
@@ -92,6 +93,6 @@ library PeanutRouter {
         address _spender,
         uint _amount
     ) private {
-        IERC20(_token).safeIncreaseAllowance(_spender, _amount);
+        IERC20Upgradeable(_token).safeIncreaseAllowance(_spender, _amount);
     }
 }
