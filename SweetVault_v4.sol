@@ -18,7 +18,6 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IFarm.sol";
