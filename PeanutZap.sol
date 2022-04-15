@@ -18,31 +18,17 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
-
 import "./interfaces/IPancakeRouter02.sol";
-import "./interfaces/IPancakePair.sol";
+import "./interfaces/IwNative.sol";
+import "./interfaces/IPeanutZap.sol";
 import "./helpers/PeanutRouter.sol";
+import "./helpers/ZapHelpers.sol";
+import "./helpers/Permit.sol";
 
-interface IwNative is IERC20 {
-    function deposit() external payable;
-
-    function withdraw(uint) external;
-}
-
-contract PeanutZap is OwnableUpgradeable, PeanutRouter {
+contract PeanutZap is IPeanutZap, OwnableUpgradeable, ReentrancyGuardUpgradeable, ZapHelpers {
     using SafeERC20 for IERC20;
-
-    struct Tokens {
-        address token0;
-        address token1;
-    }
-
-    struct InitialBalances {
-        uint token0;
-        uint token1;
-        uint inputToken;
-    }
 
     address public treasury;
     IwNative public wNATIVE;
@@ -51,7 +37,8 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
         address _treasury,
         address _owner,
         address _wNative
-    ) public initializer {
+    ) external initializer {
+        __ReentrancyGuard_init();
         __Ownable_init();
         transferOwnership(_owner);
 
@@ -60,243 +47,277 @@ contract PeanutZap is OwnableUpgradeable, PeanutRouter {
     }
 
     function zapToken(
-        IPancakeRouter02 _router,
-        address[] calldata _pathToToken0,
-        address[] calldata _pathToToken1,
+        ZapInfo calldata _zapInfo,
         address _inputToken,
-        address _outputToken,
-        uint _inputTokenAmount,
-        uint _minToken0,
-        uint _minToken1
-    ) public {
-        Tokens memory tokens = _getTokens(_outputToken);
+        uint _inputTokenAmount
+    ) external nonReentrant {
+        Pair memory pair = _getPairInfo(_zapInfo.outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
-            _getBalance(tokens.token0),
-            _getBalance(tokens.token1),
+            _getBalance(pair.token0),
+            _getBalance(pair.token1),
             _getBalance(_inputToken)
         );
 
         IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _inputTokenAmount);
 
         _zap(
-            _router,
-            _pathToToken0,
-            _pathToToken1,
+            _zapInfo,
             _inputToken,
-            _minToken0,
-            _minToken1,
-            tokens,
+            pair,
             initialBalances
         );
     }
 
     function zapNative(
-        IPancakeRouter02 _router,
-        address[] calldata _pathToToken0,
-        address[] calldata _pathToToken1,
-        address _outputToken,
-        uint _minToken0,
-        uint _minToken1
-    ) external payable {
-        Tokens memory tokens = _getTokens(_outputToken);
+        ZapInfo calldata _zapInfo
+    ) external payable nonReentrant {
+        Pair memory pair = _getPairInfo(_zapInfo.outputToken);
 
         InitialBalances memory initialBalances = InitialBalances(
-            _getBalance(tokens.token0),
-            _getBalance(tokens.token1),
+            _getBalance(pair.token0),
+            _getBalance(pair.token1),
             _getBalance(address(wNATIVE))
         );
 
-        // TODO check if this throws or returns false in case of .deposit() failing
         wNATIVE.deposit{value : msg.value}();
 
         _zap(
-            _router,
-            _pathToToken0,
-            _pathToToken1,
+            _zapInfo,
             address(wNATIVE),
-            _minToken0,
-            _minToken1,
-            tokens,
+            pair,
             initialBalances
         );
     }
 
+    // TODO reentrancy guard
     function _zap(
-        IPancakeRouter02 _router,
-        address[] calldata _pathToToken0,
-        address[] calldata _pathToToken1,
+        ZapInfo calldata _zapInfo,
         address _inputToken,
-        uint _minToken0,
-        uint _minToken1,
-        Tokens memory _tokens,
+        Pair memory _pair,
         InitialBalances memory _initialBalances
     ) private {
+        require(_zapInfo.pathToToken0[0] == _zapInfo.pathToToken1[0], "Zap:: Invalid paths");
+
         uint swapInputAmount = (_getBalance(_inputToken) - _initialBalances.inputToken) / 2;
 
-        if (_inputToken != _tokens.token0)
-            _swap(_router, swapInputAmount, _minToken0, _pathToToken0, address(this));
+        if (_inputToken != _pair.token0)
+            PeanutRouter.swap(_zapInfo.router, swapInputAmount, _zapInfo.minToken0, _zapInfo.pathToToken0);
 
-        if (_inputToken != _tokens.token1)
-            _swap(_router, swapInputAmount, _minToken1, _pathToToken1, address(this));
+        if (_inputToken != _pair.token1)
+            PeanutRouter.swap(_zapInfo.router, swapInputAmount, _zapInfo.minToken1, _zapInfo.pathToToken1);
 
-        _addLiquidity(
-            _router,
-            _tokens.token0,
-            _tokens.token1,
-            _getBalance(_tokens.token0) - _initialBalances.token0,
-            _getBalance(_tokens.token1) - _initialBalances.token1,
-            _minToken0,
-            _minToken1,
+        PeanutRouter.addLiquidity(
+            _zapInfo.router,
+            _pair.token0,
+            _pair.token1,
+            _getBalance(_pair.token0) - _initialBalances.token0,
+            _getBalance(_pair.token1) - _initialBalances.token1,
+            _zapInfo.minToken0,
+            _zapInfo.minToken1,
             msg.sender
         );
     }
 
     function unZapToken(
-        IPancakeRouter02 _router,
-        address[] calldata _pathFromToken0,
-        address[] calldata _pathFromToken1,
-        address _inputToken,
-        address _outputToken,
-        uint _inputTokenAmount,
-        uint _minOutputToken0,
-        uint _minOutputToken1,
-        address _to
-    ) public {
-        uint initialOutputTokenBalance = _getBalance(_outputToken);
-
-        _unZapToken(
-            _router,
-            _pathFromToken0,
-            _pathFromToken1,
-            _inputToken,
-            _outputToken,
-            _inputTokenAmount,
-            _minOutputToken0,
-            _minOutputToken1,
-            _to
-        );
-
-        uint finalOutputTokenBalance = _getBalance(_outputToken);
-
-        if (finalOutputTokenBalance != initialOutputTokenBalance)
-            IERC20(_outputToken).safeTransfer(
-                msg.sender,
-                finalOutputTokenBalance - initialOutputTokenBalance
-            );
+        UnZapInfo calldata _unZapInfo,
+        address _outputToken
+    ) external nonReentrant {
+        _unZapToken(_unZapInfo, _outputToken);
     }
 
-    // TODO maybe consider only the output of desired token
-    function unZapNative(
-        IPancakeRouter02 _router,
-        address[] calldata _pathFromToken0,
-        address[] calldata _pathFromToken1,
-        address _inputToken,
-        uint _inputTokenAmount,
-        uint _minOutputToken0,
-        uint _minOutputToken1,
-        address payable _to
-    ) external {
+    function unZapTokenWithPermit(
+        UnZapInfo calldata _unZapInfo,
+        address _outputToken,
+        bytes calldata _signatureData
+    ) external nonReentrant {
+        Permit.approve(
+            _unZapInfo.inputToken,
+            _unZapInfo.inputTokenAmount,
+            _signatureData
+        );
+
+        _unZapToken(_unZapInfo, _outputToken);
+    }
+
+    function _unZapToken(
+        UnZapInfo calldata _unZapInfo,
+        address _outputToken
+    ) private {
+        uint initialOutputTokenBalance = _getBalance(_outputToken);
+
+        _unZap(_unZapInfo, _outputToken);
+
+        IERC20(_outputToken).safeTransfer(
+            msg.sender,
+            _calculateUnZapProfit(
+                initialOutputTokenBalance,
+                _getBalance(_outputToken),
+                _unZapInfo.minOutputTokenAmount
+            )
+        );
+    }
+
+    function unZapNative(UnZapInfo calldata _unZapInfo) external nonReentrant {
+        _unZapNative(_unZapInfo);
+    }
+
+    function unZapNativeWithPermit(
+        UnZapInfo calldata _unZapInfo,
+        bytes calldata _signatureData
+    ) external nonReentrant {
+        Permit.approve(
+            _unZapInfo.inputToken,
+            _unZapInfo.inputTokenAmount,
+            _signatureData
+        );
+
+        _unZapNative(_unZapInfo);
+    }
+
+    function _unZapNative(UnZapInfo calldata _unZapInfo) private {
         address outputToken = address(wNATIVE);
         uint initialOutputTokenBalance = _getBalance(outputToken);
 
-        _unZapToken(
-            _router,
-            _pathFromToken0,
-            _pathFromToken1,
-            _inputToken,
-            outputToken,
-            _inputTokenAmount,
-            _minOutputToken0,
-            _minOutputToken1,
-            address(this)
+        _unZap(_unZapInfo, outputToken);
+
+        uint profit = _calculateUnZapProfit(
+            initialOutputTokenBalance,
+            _getBalance(outputToken),
+            _unZapInfo.minOutputTokenAmount
         );
 
-        uint finalOutputTokenBalance = _getBalance(outputToken);
+        wNATIVE.withdraw(profit);
 
-        if (finalOutputTokenBalance != initialOutputTokenBalance) {
-            uint amount = finalOutputTokenBalance - initialOutputTokenBalance;
-
-            wNATIVE.withdraw(amount);
-
-            // TODO check if safe
-            _to.transfer(amount);
-        }
+        payable(msg.sender).transfer(profit);
     }
 
-    // TODO maybe consider only the output of desired token
-    function _unZapToken(
-        IPancakeRouter02 _router,
-        address[] calldata _pathFromToken0,
-        address[] calldata _pathFromToken1,
-        address _inputToken,
-        address _outputToken,
-        uint _inputTokenAmount,
-        uint _minOutputToken0,
-        uint _minOutputToken1,
-        address _to
-    ) public {
-        Tokens memory tokens = _getTokens(_inputToken);
+    function _unZap(
+        UnZapInfo calldata _unZapInfo,
+        address _outputToken
+    ) private {
+        Pair memory pair = _getPairInfo(_unZapInfo.inputToken);
 
+        (uint amount0, uint amount1) = _removeLiquidity(
+            pair,
+            _unZapInfo.router,
+            _unZapInfo.inputToken,
+            _unZapInfo.inputTokenAmount
+        );
+
+        if (_outputToken != pair.token0)
+            PeanutRouter.swap(
+                _unZapInfo.router,
+                amount0,
+                0,
+                _unZapInfo.pathFromToken0
+            );
+
+        if (_outputToken != pair.token1)
+            PeanutRouter.swap(
+                _unZapInfo.router,
+                amount1,
+                0,
+                _unZapInfo.pathFromToken1
+            );
+    }
+
+    function _removeLiquidity(
+        Pair memory _pair,
+        IPancakeRouter02 _router,
+        address _inputToken,
+        uint _inputTokenAmount
+    ) private returns (
+        uint amount0,
+        uint amount1
+    ) {
         InitialBalances memory initialBalances = InitialBalances(
-            _getBalance(tokens.token0),
-            _getBalance(tokens.token1),
+            _getBalance(_pair.token0),
+            _getBalance(_pair.token1),
             _getBalance(_inputToken)
         );
 
-        IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _inputTokenAmount);
-
-        // TODO support fee on transfer tokens
-        _removeLiquidity(
-            _router,
-            tokens.token0,
-            tokens.token1,
-            _inputToken,
-            _getBalance(_inputToken) - initialBalances.inputToken,
-            0, // TODO maybe care about output amounts
-            0 // TODO maybe care about output amounts
+        IERC20(_inputToken).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _inputTokenAmount
         );
 
-        if (_outputToken != tokens.token0)
-            _swap(
-                _router,
-                _getBalance(tokens.token0) - initialBalances.token0,
-                _minOutputToken0,
-                _pathFromToken0,
-                _to
+        PeanutRouter.removeLiquidity(
+            _router,
+            _pair.token0,
+            _pair.token1,
+            _inputToken,
+            _getBalance(_inputToken) - initialBalances.inputToken,
+            0,
+            0
+        );
+
+        amount0 = _getBalance(_pair.token0) - initialBalances.token0;
+        amount1 = _getBalance(_pair.token1) - initialBalances.token1;
+    }
+
+    function zapPair(ZapPairInfo calldata _zapPairInfo) external nonReentrant {
+        Pair memory inputPair = _getPairInfo(_zapPairInfo.inputToken);
+        Pair memory outputPair = _getPairInfo(_zapPairInfo.outputToken);
+
+        uint initialBalanceTokenA = _getBalance(outputPair.token0);
+        uint initialBalanceTokenB = _getBalance(outputPair.token1);
+
+        (uint amount0, uint amount1) = _removeLiquidity(
+            inputPair,
+            _zapPairInfo.routerIn,
+            _zapPairInfo.inputToken,
+            _zapPairInfo.inputTokenAmount
+        );
+
+        if (_zapPairInfo.pathFromToken0.length > 0) {
+            require(
+                _zapPairInfo.pathFromToken0[0] == inputPair.token0,
+                "zapPair::Invalid pathFromToken0"
             );
 
-        if (_outputToken != tokens.token1)
-            _swap(
-                _router,
-                _getBalance(tokens.token1) - initialBalances.token1,
-                _minOutputToken1,
-                _pathFromToken1,
-                _to
+            PeanutRouter.swap(
+                _zapPairInfo.routerSwap,
+                amount0,
+                0,
+                _zapPairInfo.pathFromToken0
             );
+        }
+
+        if (_zapPairInfo.pathFromToken1.length > 0) {
+            require(
+                _zapPairInfo.pathFromToken1[0] == inputPair.token1,
+                "zapPair::Invalid pathFromToken1"
+            );
+
+            PeanutRouter.swap(
+                _zapPairInfo.routerSwap,
+                amount1,
+                0,
+                _zapPairInfo.pathFromToken1
+            );
+        }
+
+        PeanutRouter.addLiquidity(
+            _zapPairInfo.routerOut,
+            outputPair.token0,
+            outputPair.token1,
+            _getBalance(outputPair.token0) - initialBalanceTokenA,
+            _getBalance(outputPair.token1) - initialBalanceTokenB,
+            _zapPairInfo.minTokenA,
+            _zapPairInfo.minTokenB,
+            msg.sender
+        );
     }
 
-    function _getTokens(
-        address _lp
-    ) private view returns (
-        Tokens memory tokens
-    ) {
-        IPancakePair lp = IPancakePair(_lp);
-
-        return Tokens(lp.token0(), lp.token1());
-    }
-
-    function _getBalance(address _token) private view returns (uint) {
-        return IERC20(_token).balanceOf(address(this));
-    }
-
-    function collectDust(address _token) public {
+    function collectDust(address _token) public onlyOwner {
         IERC20 token = IERC20(_token);
 
         token.safeTransfer(treasury, token.balanceOf(address(this)));
     }
 
-    function collectDustMultiple(address[] calldata _tokens) public {
+    function collectDustMultiple(address[] calldata _tokens) external onlyOwner {
         for (uint index = 0; index < _tokens.length; ++index) {
             collectDust(_tokens[index]);
         }

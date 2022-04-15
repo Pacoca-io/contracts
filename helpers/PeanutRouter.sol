@@ -16,19 +16,17 @@
 
 pragma solidity 0.8.9;
 
+import "../interfaces/IPancakeRouter02.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/utils/SafeERC20.sol";
 
-import "../interfaces/IPancakeRouter02.sol";
-
-contract PeanutRouter {
+library PeanutRouter {
     using SafeERC20 for IERC20;
 
-    function _swap(
+    function swap(
         IPancakeRouter02 _router,
         uint _amountIn,
         uint _amountOutMin,
-        address[] memory _path,
-        address _to
+        address[] memory _path
     ) internal {
         _approveSpend(_path[0], address(_router), _amountIn);
 
@@ -36,12 +34,12 @@ contract PeanutRouter {
             _amountIn,
             _amountOutMin,
             _path,
-            _to,
+            address(this),
             block.timestamp
         );
     }
 
-    function _addLiquidity(
+    function addLiquidity(
         IPancakeRouter02 _router,
         address _token0,
         address _token1,
@@ -66,7 +64,7 @@ contract PeanutRouter {
         );
     }
 
-    function _removeLiquidity(
+    function removeLiquidity(
         IPancakeRouter02 _router,
         address _token0,
         address _token1,
@@ -82,8 +80,8 @@ contract PeanutRouter {
             _token0,
             _token1,
             _liquidity,
-            _minOut0, // TODO maybe care about output amounts
-            _minOut1, // TODO maybe care about output amounts
+            _minOut0,
+            _minOut1,
             address(this),
             block.timestamp
         );
