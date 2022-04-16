@@ -509,5 +509,5 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, AccessContr
         emit SetEarlyWithdrawFee(oldEarlyWithdrawFee, earlyWithdrawFee);
     }
 
-    function _authorizeUpgrade(address) internal override requireRole(IAuthority.Role.OWNER) {}
+    function _authorizeUpgrade(address) internal override requireRole(IAuthority.Role.DAO) {}
 }

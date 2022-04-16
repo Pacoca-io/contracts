@@ -28,11 +28,13 @@ contract Authority is IAuthority, AccessControlled, UUPSUpgradeable {
 
     function initialize(
         address _dao,
+        address _owner,
         address _treasury,
         address _keeper,
         address _manager
     ) public initializer {
-        _setRole(Role.OWNER, _dao, true);
+        _setRole(Role.DAO, _dao, true);
+        _setRole(Role.OWNER, _owner, true);
         _setRole(Role.TREASURY, _treasury, true);
         _setRole(Role.KEEPER, _keeper, true);
         _setRole(Role.MANAGER, _manager, true);
@@ -44,7 +46,7 @@ contract Authority is IAuthority, AccessControlled, UUPSUpgradeable {
         Role _role,
         address _user,
         bool _active
-    ) external requireRole(Role.OWNER) {
+    ) external requireRole(Role.DAO) {
         _setRole(_role, _user, _active);
     }
 
@@ -53,7 +55,7 @@ contract Authority is IAuthority, AccessControlled, UUPSUpgradeable {
         address _user,
         bool _active
     ) internal {
-        if (_role == Role.OWNER && _active) {
+        if (_role == Role.DAO && _active) {
             require(
                 _user != address(0),
                 "Authority::_setRole: Owner cannot be zero address"
@@ -78,5 +80,5 @@ contract Authority is IAuthority, AccessControlled, UUPSUpgradeable {
         emit SetRole(_role, _user, _active);
     }
 
-    function _authorizeUpgrade(address) internal override requireRole(Role.OWNER) {}
+    function _authorizeUpgrade(address) internal override requireRole(Role.DAO) {}
 }
