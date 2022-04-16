@@ -20,12 +20,12 @@ import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
 import "../interfaces/IAuthority.sol";
 
 abstract contract AccessControlled is Initializable {
-    event AuthorityUpdated(IAuthority indexed authority);
+    event AuthorityUpdated(address indexed authority);
 
     IAuthority public authority;
 
-    function __AccessControlled_init(IAuthority _authority) public initializer {
-        authority = _authority;
+    function __AccessControlled_init(address _authority) public initializer {
+        authority = IAuthority(_authority);
 
         emit AuthorityUpdated(_authority);
     }
@@ -39,8 +39,8 @@ abstract contract AccessControlled is Initializable {
         _;
     }
 
-    function setAuthority(IAuthority _newAuthority) external requireRole(IAuthority.Role.DAO) {
-        authority = _newAuthority;
+    function setAuthority(address _newAuthority) external requireRole(IAuthority.Role.DAO) {
+        authority = IAuthority(_newAuthority);
 
         emit AuthorityUpdated(_newAuthority);
     }

@@ -18,16 +18,15 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 import "./interfaces/IPeanutZap.sol";
 import "./interfaces/ISweetVault.sol";
 import "./helpers/Permit.sol";
-import "./access/AccessControlled.sol";
+import "./access/ControlledUUPS.sol";
 
-contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, AccessControlled, ReentrancyGuardUpgradeable {
+contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct UserInfo {
@@ -120,7 +119,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, AccessContr
         platformFee = 550;
 
         __ReentrancyGuard_init();
-        __AccessControlled_init(IAuthority(_authority));
+        __ControlledUUPS_init(_authority);
 
         platform = _platform;
     }
@@ -508,6 +507,4 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, AccessContr
 
         emit SetEarlyWithdrawFee(oldEarlyWithdrawFee, earlyWithdrawFee);
     }
-
-    function _authorizeUpgrade(address) internal override requireRole(IAuthority.Role.DAO) {}
 }
