@@ -212,13 +212,13 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
                 _zapInfo
             );
         } else {
-            IERC20Upgradeable(_farmInfo.stakedToken).safeTransferFrom(
+            IERC20Upgradeable(_inputToken).safeTransferFrom(
                 address(msg.sender),
                 address(this),
                 _inputTokenAmount
             );
 
-            IERC20Upgradeable(_farmInfo.stakedToken).approve(zap, _inputTokenAmount);
+            IERC20Upgradeable(_inputToken).approve(zap, _inputTokenAmount);
 
             IPeanutZap(zap).zapToken(
                 _zapInfo,
