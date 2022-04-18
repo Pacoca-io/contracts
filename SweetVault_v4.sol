@@ -203,9 +203,8 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         address _inputToken,
         uint _inputTokenAmount
     ) external payable nonReentrant {
-        FarmInfo memory _farmInfo = farmInfo;
-
-        uint initialStakedTokenBalance = _currentBalance(_farmInfo.stakedToken);
+        address stakedToken = farmInfo.stakedToken;
+        uint initialStakedTokenBalance = _currentBalance(stakedToken);
         uint initialInputTokenBalance = _currentBalance(_inputToken);
 
         if (_inputToken == address(0)) {
@@ -228,7 +227,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
             );
         }
 
-        _deposit(_currentBalance(_farmInfo.stakedToken) - initialStakedTokenBalance);
+        _deposit(_currentBalance(stakedToken) - initialStakedTokenBalance);
     }
 
     function zapWithPermitAndDeposit(
