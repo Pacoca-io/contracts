@@ -17,17 +17,16 @@
 pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IFarm.sol";
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPacocaVault.sol";
 import "./interfaces/IPeanutZap.sol";
 import "./interfaces/ISweetVault.sol";
 import "./helpers/Permit.sol";
+import "./access/ControlledUUPS.sol";
 
-contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct UserInfo {
@@ -67,9 +66,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
 
     address payable public zap;
 
-    address public treasury;
-    address public keeper;
-
     address public platform;
     uint256 public platformFee;
     uint256 public constant platformFeeUL = 1000;
@@ -86,8 +82,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
     // Setting updates
     event SetPathToPacoca(address[] oldPath, address[] newPath);
     event SetPathToWbnb(address[] oldPath, address[] newPath);
-    event SetTreasury(address oldTreasury, address newTreasury);
-    event SetKeeper(address oldKeeper, address newKeeper);
     event SetPlatform(address oldPlatform, address newPlatform);
     event SetPlatformFee(uint256 oldPlatformFee, uint256 newPlatformFee);
     event SetEarlyWithdrawFee(uint256 oldEarlyWithdrawFee, uint256 newEarlyWithdrawFee);
@@ -99,9 +93,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
         address[] memory _pathToPacoca,
         address[] memory _pathToWbnb,
         address payable _zap,
-        address _owner,
-        address _treasury,
-        address _keeper,
+        address _authority,
         address _platform
     ) public initializer {
         require(
@@ -127,20 +119,9 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
         platformFee = 550;
 
         __ReentrancyGuard_init();
-        __Ownable_init();
-        transferOwnership(_owner);
+        __ControlledUUPS_init(_authority);
 
-        treasury = _treasury;
-        keeper = _keeper;
         platform = _platform;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the keeper.
-     */
-    modifier onlyKeeper() {
-        require(keeper == msg.sender, "SweetVault: caller is not the keeper");
-        _;
     }
 
     // 1. Harvest rewards
@@ -150,7 +131,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
     function earn(
         uint256 _minPlatformOutput,
         uint256 _minPacocaOutput
-    ) external virtual onlyKeeper {
+    ) external virtual requireRole(IAuthority.Role.KEEPER) {
         FarmInfo memory _farmInfo = farmInfo;
 
         IFarm(_farmInfo.farm).withdraw(_farmInfo.pid, 0);
@@ -306,7 +287,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
         if (block.timestamp < user.lastDepositedTime + withdrawFeePeriod) {
             uint256 currentWithdrawFee = (currentAmount * earlyWithdrawFee) / 10000;
 
-            IERC20Upgradeable(_farmInfo.stakedToken).safeTransfer(treasury, currentWithdrawFee);
+            IERC20Upgradeable(_farmInfo.stakedToken).safeTransfer(authority.treasury(), currentWithdrawFee);
 
             currentAmount = currentAmount - currentWithdrawFee;
 
@@ -470,7 +451,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
         _user.rewardDebt = (_user.stake * accSharesPerStakedToken) / 1e18;
     }
 
-    function setPathToPacoca(address[] memory _path) external onlyOwner {
+    function setPathToPacoca(address[] memory _path) external requireRole(IAuthority.Role.OWNER) {
         require(
             _path[0] == farmInfo.rewardToken && _path[_path.length - 1] == PACOCA,
             "SweetVault: Incorrect path to PACOCA"
@@ -483,7 +464,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
         emit SetPathToPacoca(oldPath, pathToPacoca);
     }
 
-    function setPathToWbnb(address[] memory _path) external onlyOwner {
+    function setPathToWbnb(address[] memory _path) external requireRole(IAuthority.Role.OWNER) {
         require(
             _path[0] == farmInfo.rewardToken && _path[_path.length - 1] == WBNB,
             "SweetVault: Incorrect path to WBNB"
@@ -496,23 +477,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
         emit SetPathToWbnb(oldPath, pathToWbnb);
     }
 
-    function setTreasury(address _treasury) external onlyOwner {
-        address oldTreasury = treasury;
-
-        treasury = _treasury;
-
-        emit SetTreasury(oldTreasury, treasury);
-    }
-
-    function setKeeper(address _keeper) external onlyOwner {
-        address oldKeeper = keeper;
-
-        keeper = _keeper;
-
-        emit SetKeeper(oldKeeper, keeper);
-    }
-
-    function setPlatform(address _platform) external onlyOwner {
+    function setPlatform(address _platform) external requireRole(IAuthority.Role.OWNER) {
         address oldPlatform = platform;
 
         platform = _platform;
@@ -520,7 +485,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
         emit SetPlatform(oldPlatform, platform);
     }
 
-    function setPlatformFee(uint256 _platformFee) external onlyOwner {
+    function setPlatformFee(uint256 _platformFee) external requireRole(IAuthority.Role.OWNER) {
         require(_platformFee <= platformFeeUL, "SweetVault: Platform fee too high");
 
         uint256 oldPlatformFee = platformFee;
@@ -530,7 +495,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
         emit SetPlatformFee(oldPlatformFee, platformFee);
     }
 
-    function setEarlyWithdrawFee(uint256 _earlyWithdrawFee) external onlyOwner {
+    function setEarlyWithdrawFee(uint256 _earlyWithdrawFee) external requireRole(IAuthority.Role.OWNER) {
         require(
             _earlyWithdrawFee <= earlyWithdrawFeeUL,
             "SweetVault: Early withdraw fee too high"
@@ -542,6 +507,4 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, UUPSUpgradeable, OwnableUpgr
 
         emit SetEarlyWithdrawFee(oldEarlyWithdrawFee, earlyWithdrawFee);
     }
-
-    function _authorizeUpgrade(address) internal override onlyOwner {}
 }
