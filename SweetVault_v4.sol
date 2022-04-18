@@ -181,6 +181,23 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         _deposit(_amount);
     }
 
+    function depositWithPermit(
+        uint256 _amount,
+        bytes calldata _signatureData
+    ) external nonReentrant {
+        require(_amount > 0, "SweetVault: amount must be greater than zero");
+
+        Permit.approve(farmInfo.stakedToken, _amount, _signatureData);
+
+        IERC20Upgradeable(farmInfo.stakedToken).safeTransferFrom(
+            address(msg.sender),
+            address(this),
+            _amount
+        );
+
+        _deposit(_amount);
+    }
+
     function zapAndDeposit(
         ZapInfo calldata _zapInfo,
         address _inputToken,
