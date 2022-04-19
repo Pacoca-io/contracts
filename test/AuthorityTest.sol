@@ -26,4 +26,8 @@ contract AuthorityTest is ControlledUUPS {
     function onlyKeeper() public requireRole(IAuthority.Role.KEEPER) {
         emit Called('onlyKeeper');
     }
+
+    function onlyRewardDistributor() public requireRole(IAuthority.Role.REWARD_DISTRIBUTOR) {
+        emit Called('onlyRewardDistributor');
+    }
 }
