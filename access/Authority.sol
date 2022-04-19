@@ -22,6 +22,7 @@ import "./ControlledUUPS.sol";
 contract Authority is IAuthority, ControlledUUPS {
     address public treasury;
     address public dao;
+    address public rewardDistributor;
 
     mapping(Role => mapping(address => bool)) public userRoles;
 
@@ -30,13 +31,15 @@ contract Authority is IAuthority, ControlledUUPS {
         address _owner,
         address _treasury,
         address _keeper,
-        address _manager
+        address _manager,
+        address _rewardDistributor
     ) public initializer {
         _setRole(Role.DAO, _dao, true);
         _setRole(Role.OWNER, _owner, true);
         _setRole(Role.TREASURY, _treasury, true);
         _setRole(Role.KEEPER, _keeper, true);
         _setRole(Role.MANAGER, _manager, true);
+        _setRole(Role.REWARD_DISTRIBUTOR, _rewardDistributor, true);
 
         __ControlledUUPS_init(address(this));
     }
@@ -54,10 +57,14 @@ contract Authority is IAuthority, ControlledUUPS {
         address _user,
         bool _active
     ) internal {
-        if (_role == Role.DAO && _active) {
+        if (_role == Role.DAO) {
             require(
                 _user != address(0),
-                "Authority::_setRole: Owner cannot be zero address"
+                "Authority::_setRole: DAO cannot be zero address"
+            );
+            require(
+                _active,
+                "Authority::_setRole: DAO cannot be disabled"
             );
 
             userRoles[_role][dao] = false;
@@ -72,6 +79,16 @@ contract Authority is IAuthority, ControlledUUPS {
 
             userRoles[_role][treasury] = false;
             treasury = _user;
+        }
+
+        if (_role == Role.REWARD_DISTRIBUTOR && _active) {
+            require(
+                _user != address(0),
+                "Authority::_setRole: Reward distributor cannot be zero address"
+            );
+
+            userRoles[_role][rewardDistributor] = false;
+            rewardDistributor = _user;
         }
 
         userRoles[_role][_user] = _active;
