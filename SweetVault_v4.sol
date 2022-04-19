@@ -66,7 +66,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
     address payable public zap;
 
-    address public platform;
     uint256 public platformFee;
     uint256 public constant platformFeeUL = 1000;
 
@@ -82,7 +81,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     // Setting updates
     event SetPathToPacoca(address[] oldPath, address[] newPath);
     event SetPathToWbnb(address[] oldPath, address[] newPath);
-    event SetPlatform(address oldPlatform, address newPlatform);
     event SetPlatformFee(uint256 oldPlatformFee, uint256 newPlatformFee);
     event SetEarlyWithdrawFee(uint256 oldEarlyWithdrawFee, uint256 newEarlyWithdrawFee);
 
@@ -93,8 +91,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         address[] memory _pathToPacoca,
         address[] memory _pathToWbnb,
         address payable _zap,
-        address _authority,
-        address _platform
+        address _authority
     ) public initializer {
         require(
             _pathToPacoca[0] == _farmInfo.rewardToken && _pathToPacoca[_pathToPacoca.length - 1] == PACOCA,
@@ -120,8 +117,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
         __ReentrancyGuard_init();
         __ControlledUUPS_init(_authority);
-
-        platform = _platform;
     }
 
     // 1. Harvest rewards
@@ -141,7 +136,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
             _currentBalance(_farmInfo.rewardToken) * platformFee / 10000,
             _minPlatformOutput,
             pathToWbnb,
-            platform
+            authority.rewardDistributor()
         );
 
         // Convert remaining rewards to PACOCA
@@ -522,14 +517,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         pathToWbnb = _path;
 
         emit SetPathToWbnb(oldPath, pathToWbnb);
-    }
-
-    function setPlatform(address _platform) external requireRole(IAuthority.Role.OWNER) {
-        address oldPlatform = platform;
-
-        platform = _platform;
-
-        emit SetPlatform(oldPlatform, platform);
     }
 
     function setPlatformFee(uint256 _platformFee) external requireRole(IAuthority.Role.OWNER) {
