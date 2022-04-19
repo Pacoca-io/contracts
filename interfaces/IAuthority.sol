@@ -23,7 +23,8 @@ interface IAuthority {
         OWNER,
         TREASURY,
         KEEPER,
-        MANAGER
+        MANAGER,
+        REWARD_DISTRIBUTOR
     }
 
     event SetRole(Role indexed role, address indexed user, bool active);
@@ -31,6 +32,8 @@ interface IAuthority {
     function dao() external view returns (address);
 
     function treasury() external view returns (address);
+
+    function rewardDistributor() external view returns (address);
 
     function userRoles(Role, address) external view returns (bool);
 }
