@@ -205,13 +205,14 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     ) external payable nonReentrant {
         address stakedToken = farmInfo.stakedToken;
         uint initialStakedTokenBalance = _currentBalance(stakedToken);
-        uint initialInputTokenBalance = _currentBalance(_inputToken);
 
         if (_inputToken == address(0)) {
             IPeanutZap(zap).zapNative{value : msg.value}(
                 _zapInfo
             );
         } else {
+            uint initialInputTokenBalance = _currentBalance(_inputToken);
+
             IERC20Upgradeable(_inputToken).safeTransferFrom(
                 address(msg.sender),
                 address(this),
