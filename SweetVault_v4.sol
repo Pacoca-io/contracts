@@ -181,36 +181,83 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         _deposit(_amount);
     }
 
+    function depositWithPermit(
+        uint256 _amount,
+        bytes calldata _signatureData
+    ) external nonReentrant {
+        require(_amount > 0, "SweetVault: amount must be greater than zero");
+
+        Permit.approve(farmInfo.stakedToken, _amount, _signatureData);
+
+        IERC20Upgradeable(farmInfo.stakedToken).safeTransferFrom(
+            address(msg.sender),
+            address(this),
+            _amount
+        );
+
+        _deposit(_amount);
+    }
+
     function zapAndDeposit(
         ZapInfo calldata _zapInfo,
         address _inputToken,
         uint _inputTokenAmount
     ) external payable nonReentrant {
-        FarmInfo memory _farmInfo = farmInfo;
-
-        uint initialBalance = _currentBalance(_farmInfo.stakedToken);
+        address stakedToken = farmInfo.stakedToken;
+        uint initialStakedTokenBalance = _currentBalance(stakedToken);
 
         if (_inputToken == address(0)) {
             IPeanutZap(zap).zapNative{value : msg.value}(
                 _zapInfo
             );
         } else {
-            IERC20Upgradeable(_farmInfo.stakedToken).safeTransferFrom(
+            uint initialInputTokenBalance = _currentBalance(_inputToken);
+
+            IERC20Upgradeable(_inputToken).safeTransferFrom(
                 address(msg.sender),
                 address(this),
                 _inputTokenAmount
             );
 
-            IERC20Upgradeable(_farmInfo.stakedToken).approve(zap, _inputTokenAmount);
+            IERC20Upgradeable(_inputToken).approve(zap, _inputTokenAmount);
 
             IPeanutZap(zap).zapToken(
                 _zapInfo,
                 _inputToken,
-                _inputTokenAmount
+                _currentBalance(_inputToken) - initialInputTokenBalance
             );
         }
 
-        _deposit(_currentBalance(_farmInfo.stakedToken) - initialBalance);
+        _deposit(_currentBalance(stakedToken) - initialStakedTokenBalance);
+    }
+
+    function zapWithPermitAndDeposit(
+        ZapInfo calldata _zapInfo,
+        address _inputToken,
+        uint _inputTokenAmount,
+        bytes calldata _signatureData
+    ) external nonReentrant {
+        address stakedToken = farmInfo.stakedToken;
+        uint initialStakedTokenBalance = _currentBalance(stakedToken);
+        uint initialInputTokenBalance = _currentBalance(_inputToken);
+
+        Permit.approve(_inputToken, _inputTokenAmount, _signatureData);
+
+        IERC20Upgradeable(_inputToken).safeTransferFrom(
+            address(msg.sender),
+            address(this),
+            _inputTokenAmount
+        );
+
+        IERC20Upgradeable(_inputToken).approve(zap, _inputTokenAmount);
+
+        IPeanutZap(zap).zapToken(
+            _zapInfo,
+            _inputToken,
+            _currentBalance(_inputToken) - initialInputTokenBalance
+        );
+
+        _deposit(_currentBalance(stakedToken) - initialStakedTokenBalance);
     }
 
     function zapPairWithPermitAndDeposit(
