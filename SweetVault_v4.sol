@@ -31,17 +31,17 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
     struct UserInfo {
         // How many assets the user has provided.
-        uint256 stake;
+        uint stake;
         // How many staked $PACOCA user had at his last action
-        uint256 autoPacocaShares;
+        uint autoPacocaShares;
         // Pacoca shares not entitled to the user
-        uint256 rewardDebt;
+        uint rewardDebt;
         // Timestamp of last user deposit
-        uint256 lastDepositedTime;
+        uint lastDepositedTime;
     }
 
     struct FarmInfo {
-        uint256 pid;
+        uint pid;
         address farm;
         address stakedToken;
         address rewardToken;
@@ -54,7 +54,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
     // Runtime data
     mapping(address => UserInfo) public userInfo; // Info of users
-    uint256 public accSharesPerStakedToken; // Accumulated AUTO_PACOCA shares per staked token, times 1e18.
+    uint public accSharesPerStakedToken; // Accumulated AUTO_PACOCA shares per staked token, times 1e18.
 
     // Farm info
     FarmInfo public farmInfo;
@@ -66,23 +66,24 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
     address payable public zap;
 
-    uint256 public platformFee;
-    uint256 public constant platformFeeUL = 1000;
+    uint public platformFee;
+    uint public constant platformFeeUL = 1000;
 
-    uint256 public earlyWithdrawFee;
-    uint256 public constant earlyWithdrawFeeUL = 300;
-    uint256 public constant withdrawFeePeriod = 3 days;
+    uint public earlyWithdrawFee;
+    uint public constant earlyWithdrawFeeUL = 300;
+    uint public constant withdrawFeePeriod = 3 days;
 
-    event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user, uint256 amount);
-    event EarlyWithdraw(address indexed user, uint256 amount, uint256 fee);
-    event ClaimRewards(address indexed user, uint256 shares, uint256 amount);
+    event Deposit(address indexed user, uint amount);
+    event Withdraw(address indexed user, uint amount);
+    event EarlyWithdraw(address indexed user, uint amount, uint fee);
+    event Earn(uint amount);
+    event ClaimRewards(address indexed user, uint shares, uint amount);
 
     // Setting updates
     event SetPathToPacoca(address[] oldPath, address[] newPath);
     event SetPathToWbnb(address[] oldPath, address[] newPath);
-    event SetPlatformFee(uint256 oldPlatformFee, uint256 newPlatformFee);
-    event SetEarlyWithdrawFee(uint256 oldEarlyWithdrawFee, uint256 newEarlyWithdrawFee);
+    event SetPlatformFee(uint oldPlatformFee, uint newPlatformFee);
+    event SetEarlyWithdrawFee(uint oldEarlyWithdrawFee, uint newEarlyWithdrawFee);
 
     function initialize(
         FarmInfo memory _farmInfo,
@@ -124,8 +125,8 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     // 3. Convert rewards to $PACOCA
     // 4. Stake to pacoca auto-compound vault
     function earn(
-        uint256 _minPlatformOutput,
-        uint256 _minPacocaOutput
+        uint _minPlatformOutput,
+        uint _minPacocaOutput
     ) external virtual requireRole(IAuthority.Role.KEEPER) {
         FarmInfo memory _farmInfo = farmInfo;
 
@@ -147,8 +148,8 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
             address(this)
         );
 
-        uint256 previousShares = totalAutoPacocaShares();
-        uint256 pacocaBalance = _currentBalance(PACOCA);
+        uint previousShares = totalAutoPacocaShares();
+        uint pacocaBalance = _currentBalance(PACOCA);
 
         _approveTokenIfNeeded(
             PACOCA,
@@ -158,13 +159,15 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
         AUTO_PACOCA.deposit(pacocaBalance);
 
-        uint256 currentShares = totalAutoPacocaShares();
-        uint256 newShares = currentShares - previousShares;
+        uint currentShares = totalAutoPacocaShares();
+        uint newShares = currentShares - previousShares;
 
         accSharesPerStakedToken = accSharesPerStakedToken + (newShares * 1e18 / totalStake());
+
+        emit Earn(pacocaBalance);
     }
 
-    function deposit(uint256 _amount) external nonReentrant {
+    function deposit(uint _amount) external nonReentrant {
         require(_amount > 0, "SweetVault: amount must be greater than zero");
 
         IERC20Upgradeable(farmInfo.stakedToken).safeTransferFrom(
@@ -177,7 +180,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     }
 
     function depositWithPermit(
-        uint256 _amount,
+        uint _amount,
         bytes calldata _signatureData
     ) external nonReentrant {
         require(_amount > 0, "SweetVault: amount must be greater than zero");
@@ -290,7 +293,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         _deposit(_currentBalance(_zapPairInfo.outputToken) - outputPairInitialBalance);
     }
 
-    function _deposit(uint256 _amount) private {
+    function _deposit(uint _amount) private {
         UserInfo storage user = userInfo[msg.sender];
         FarmInfo memory _farmInfo = farmInfo;
 
@@ -311,11 +314,11 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     }
 
     // _stake function is removed from deposit so it can be overridden for different platforms
-    function _stake(uint256 _amount) internal virtual {
+    function _stake(uint _amount) internal virtual {
         IFarm(farmInfo.farm).deposit(farmInfo.pid, _amount);
     }
 
-    function withdraw(uint256 _amount) external virtual nonReentrant {
+    function withdraw(uint _amount) external virtual nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
         FarmInfo memory _farmInfo = farmInfo;
 
@@ -324,10 +327,10 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
         IFarm(_farmInfo.farm).withdraw(_farmInfo.pid, _amount);
 
-        uint256 currentAmount = _amount;
+        uint currentAmount = _amount;
 
         if (block.timestamp < user.lastDepositedTime + withdrawFeePeriod) {
-            uint256 currentWithdrawFee = (currentAmount * earlyWithdrawFee) / 10000;
+            uint currentWithdrawFee = (currentAmount * earlyWithdrawFee) / 10000;
 
             IERC20Upgradeable(_farmInfo.stakedToken).safeTransfer(authority.treasury(), currentWithdrawFee);
 
@@ -350,11 +353,11 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         emit Withdraw(msg.sender, currentAmount);
     }
 
-    function claimRewards(uint256 _shares) external nonReentrant {
+    function claimRewards(uint _shares) external nonReentrant {
         _claimRewards(_shares, true);
     }
 
-    function _claimRewards(uint256 _shares, bool _update) internal {
+    function _claimRewards(uint _shares, bool _update) internal {
         UserInfo storage user = userInfo[msg.sender];
 
         if (_update) {
@@ -366,11 +369,11 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
         user.autoPacocaShares = user.autoPacocaShares - _shares;
 
-        uint256 pacocaBalanceBefore = _currentBalance(PACOCA);
+        uint pacocaBalanceBefore = _currentBalance(PACOCA);
 
         AUTO_PACOCA.withdraw(_shares);
 
-        uint256 withdrawAmount = _currentBalance(PACOCA) - pacocaBalanceBefore;
+        uint withdrawAmount = _currentBalance(PACOCA) - pacocaBalanceBefore;
 
         _safePACOCATransfer(msg.sender, withdrawAmount);
 
@@ -378,12 +381,12 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     }
 
     function getExpectedOutputs() external view returns (
-        uint256 platformOutput,
-        uint256 pacocaOutput
+        uint platformOutput,
+        uint pacocaOutput
     ) {
-        uint256 wbnbOutput = _getExpectedOutput(pathToWbnb);
-        uint256 pacocaOutputWithoutFees = _getExpectedOutput(pathToPacoca);
-        uint256 pacocaOutputFees = pacocaOutputWithoutFees * platformFee / 10000;
+        uint wbnbOutput = _getExpectedOutput(pathToWbnb);
+        uint pacocaOutputWithoutFees = _getExpectedOutput(pathToPacoca);
+        uint pacocaOutputFees = pacocaOutputWithoutFees * platformFee / 10000;
 
         platformOutput = wbnbOutput * platformFee / 10000;
         pacocaOutput = pacocaOutputWithoutFees - pacocaOutputFees;
@@ -391,18 +394,18 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
     function _getExpectedOutput(
         address[] memory _path
-    ) internal virtual view returns (uint256) {
+    ) internal virtual view returns (uint) {
         FarmInfo memory _farmInfo = farmInfo;
 
-        uint256 pending = IFarm(_farmInfo.farm).pendingCake(_farmInfo.pid, address(this));
+        uint pending = IFarm(_farmInfo.farm).pendingCake(_farmInfo.pid, address(this));
 
-        uint256 rewards = _currentBalance(_farmInfo.rewardToken) + pending;
+        uint rewards = _currentBalance(_farmInfo.rewardToken) + pending;
 
         if (rewards == 0) {
             return 0;
         }
 
-        uint256[] memory amounts = router.getAmountsOut(rewards, _path);
+        uint[] memory amounts = router.getAmountsOut(rewards, _path);
 
         return amounts[amounts.length - 1];
     }
@@ -410,13 +413,13 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     function balanceOf(
         address _user
     ) external view returns (
-        uint256 stake,
-        uint256 pacoca,
-        uint256 autoPacocaShares
+        uint stake,
+        uint pacoca,
+        uint autoPacocaShares
     ) {
         UserInfo memory user = userInfo[_user];
 
-        uint256 pendingShares = (user.stake * accSharesPerStakedToken / 1e18) - user.rewardDebt;
+        uint pendingShares = (user.stake * accSharesPerStakedToken / 1e18) - user.rewardDebt;
 
         stake = user.stake;
         autoPacocaShares = user.autoPacocaShares + pendingShares;
@@ -425,7 +428,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
     function _approveTokenIfNeeded(
         address _token,
-        uint256 _amount,
+        uint _amount,
         address _spender
     ) internal {
         IERC20Upgradeable tokenERC20 = IERC20Upgradeable(_token);
@@ -439,21 +442,21 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         return IERC20Upgradeable(_token).balanceOf(address(this));
     }
 
-    function totalStake() public view returns (uint256) {
+    function totalStake() public view returns (uint) {
         FarmInfo memory _farmInfo = farmInfo;
 
         return IFarm(_farmInfo.farm).userInfo(_farmInfo.pid, address(this));
     }
 
-    function totalAutoPacocaShares() public view returns (uint256) {
-        (uint256 shares, , ,) = AUTO_PACOCA.userInfo(address(this));
+    function totalAutoPacocaShares() public view returns (uint) {
+        (uint shares, , ,) = AUTO_PACOCA.userInfo(address(this));
 
         return shares;
     }
 
     // Safe PACOCA transfer function, just in case if rounding error causes pool to not have enough
-    function _safePACOCATransfer(address _to, uint256 _amount) internal {
-        uint256 balance = _currentBalance(PACOCA);
+    function _safePACOCATransfer(address _to, uint _amount) internal {
+        uint balance = _currentBalance(PACOCA);
 
         if (_amount > balance) {
             IERC20Upgradeable(PACOCA).transfer(_to, balance);
@@ -463,8 +466,8 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     }
 
     function _swap(
-        uint256 _inputAmount,
-        uint256 _minOutputAmount,
+        uint _inputAmount,
+        uint _minOutputAmount,
         address[] memory _path,
         address _to
     ) internal virtual {
@@ -519,23 +522,23 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         emit SetPathToWbnb(oldPath, pathToWbnb);
     }
 
-    function setPlatformFee(uint256 _platformFee) external requireRole(IAuthority.Role.OWNER) {
+    function setPlatformFee(uint _platformFee) external requireRole(IAuthority.Role.OWNER) {
         require(_platformFee <= platformFeeUL, "SweetVault: Platform fee too high");
 
-        uint256 oldPlatformFee = platformFee;
+        uint oldPlatformFee = platformFee;
 
         platformFee = _platformFee;
 
         emit SetPlatformFee(oldPlatformFee, platformFee);
     }
 
-    function setEarlyWithdrawFee(uint256 _earlyWithdrawFee) external requireRole(IAuthority.Role.OWNER) {
+    function setEarlyWithdrawFee(uint _earlyWithdrawFee) external requireRole(IAuthority.Role.OWNER) {
         require(
             _earlyWithdrawFee <= earlyWithdrawFeeUL,
             "SweetVault: Early withdraw fee too high"
         );
 
-        uint256 oldEarlyWithdrawFee = earlyWithdrawFee;
+        uint oldEarlyWithdrawFee = earlyWithdrawFee;
 
         earlyWithdrawFee = _earlyWithdrawFee;
 
