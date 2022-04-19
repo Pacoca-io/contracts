@@ -22,12 +22,12 @@ import "../interfaces/IAuthority.sol";
 abstract contract AccessControlled is Initializable {
     IAuthority public authority;
 
-    uint8 constant ROLE_DAO = 0;
-    uint8 constant ROLE_OWNER = 1;
-    uint8 constant ROLE_TREASURY = 2;
-    uint8 constant ROLE_KEEPER = 3;
-    uint8 constant ROLE_MANAGER = 4;
-    uint8 constant ROLE_REWARD_DISTRIBUTOR = 5;
+    uint8 constant internal ROLE_DAO = 0;
+    uint8 constant internal ROLE_OWNER = 1;
+    uint8 constant internal ROLE_TREASURY = 2;
+    uint8 constant internal ROLE_KEEPER = 3;
+    uint8 constant internal ROLE_MANAGER = 4;
+    uint8 constant internal ROLE_REWARD_DISTRIBUTOR = 5;
 
     event AuthorityUpdated(address indexed authority);
 
