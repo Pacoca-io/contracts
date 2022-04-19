@@ -76,6 +76,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event EarlyWithdraw(address indexed user, uint256 amount, uint256 fee);
+    event Earn(uint256 amount);
     event ClaimRewards(address indexed user, uint256 shares, uint256 amount);
 
     // Setting updates
@@ -162,6 +163,8 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         uint256 newShares = currentShares - previousShares;
 
         accSharesPerStakedToken = accSharesPerStakedToken + (newShares * 1e18 / totalStake());
+
+        emit Earn(pacocaBalance);
     }
 
     function deposit(uint256 _amount) external nonReentrant {
