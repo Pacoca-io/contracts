@@ -52,6 +52,10 @@ contract Authority is IAuthority, ControlledUUPS {
         _setRole(_role, _user, _active);
     }
 
+    function setAuthority(address) external pure override {
+        revert("Authority::setAuthority: Can't change authority of Authority contract");
+    }
+
     function _setRole(
         Role _role,
         address _user,
