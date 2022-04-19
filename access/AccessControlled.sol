@@ -20,9 +20,16 @@ import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
 import "../interfaces/IAuthority.sol";
 
 abstract contract AccessControlled is Initializable {
-    event AuthorityUpdated(address indexed authority);
-
     IAuthority public authority;
+
+    uint8 constant ROLE_DAO = 0;
+    uint8 constant ROLE_OWNER = 1;
+    uint8 constant ROLE_TREASURY = 2;
+    uint8 constant ROLE_KEEPER = 3;
+    uint8 constant ROLE_MANAGER = 4;
+    uint8 constant ROLE_REWARD_DISTRIBUTOR = 5;
+
+    event AuthorityUpdated(address indexed authority);
 
     function __AccessControlled_init(address _authority) public initializer {
         authority = IAuthority(_authority);
@@ -30,7 +37,7 @@ abstract contract AccessControlled is Initializable {
         emit AuthorityUpdated(_authority);
     }
 
-    modifier requireRole(IAuthority.Role _role) {
+    modifier requireRole(uint8 _role) {
         require(
             authority.userRoles(_role, msg.sender),
             "Authority::requireRole: Unauthorized"
@@ -39,7 +46,7 @@ abstract contract AccessControlled is Initializable {
         _;
     }
 
-    function setAuthority(address _newAuthority) external virtual requireRole(IAuthority.Role.DAO) {
+    function setAuthority(address _newAuthority) external virtual requireRole(ROLE_DAO) {
         authority = IAuthority(_newAuthority);
 
         emit AuthorityUpdated(_newAuthority);

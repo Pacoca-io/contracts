@@ -17,17 +17,7 @@
 pragma solidity 0.8.9;
 
 interface IAuthority {
-    // TODO check if possible to upgrade and add new roles
-    enum Role {
-        DAO,
-        OWNER,
-        TREASURY,
-        KEEPER,
-        MANAGER,
-        REWARD_DISTRIBUTOR
-    }
-
-    event SetRole(Role indexed role, address indexed user, bool active);
+    event SetRole(uint8 indexed role, address indexed user, bool active);
 
     function dao() external view returns (address);
 
@@ -35,5 +25,5 @@ interface IAuthority {
 
     function rewardDistributor() external view returns (address);
 
-    function userRoles(Role, address) external view returns (bool);
+    function userRoles(uint8, address) external view returns (bool);
 }

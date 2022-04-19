@@ -24,5 +24,5 @@ abstract contract ControlledUUPS is UUPSUpgradeable, AccessControlled {
         __AccessControlled_init(_authority);
     }
 
-    function _authorizeUpgrade(address) internal override requireRole(IAuthority.Role.DAO) {}
+    function _authorizeUpgrade(address) internal override requireRole(ROLE_DAO) {}
 }
