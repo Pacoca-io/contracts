@@ -57,10 +57,14 @@ contract Authority is IAuthority, ControlledUUPS {
         address _user,
         bool _active
     ) internal {
-        if (_role == Role.DAO && _active) {
+        if (_role == Role.DAO) {
             require(
                 _user != address(0),
-                "Authority::_setRole: Owner cannot be zero address"
+                "Authority::_setRole: DAO cannot be zero address"
+            );
+            require(
+                _active,
+                "Authority::_setRole: DAO cannot be disabled"
             );
 
             userRoles[_role][dao] = false;
