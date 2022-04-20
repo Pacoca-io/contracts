@@ -127,7 +127,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
     function earn(
         uint _minPlatformOutput,
         uint _minPacocaOutput
-    ) external virtual requireRole(IAuthority.Role.KEEPER) {
+    ) external virtual requireRole(ROLE_KEEPER) {
         FarmInfo memory _farmInfo = farmInfo;
 
         IFarm(_farmInfo.farm).withdraw(_farmInfo.pid, 0);
@@ -496,7 +496,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         _user.rewardDebt = (_user.stake * accSharesPerStakedToken) / 1e18;
     }
 
-    function setPathToPacoca(address[] memory _path) external requireRole(IAuthority.Role.OWNER) {
+    function setPathToPacoca(address[] memory _path) external requireRole(ROLE_OWNER) {
         require(
             _path[0] == farmInfo.rewardToken && _path[_path.length - 1] == PACOCA,
             "SweetVault: Incorrect path to PACOCA"
@@ -509,7 +509,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         emit SetPathToPacoca(oldPath, pathToPacoca);
     }
 
-    function setPathToWbnb(address[] memory _path) external requireRole(IAuthority.Role.OWNER) {
+    function setPathToWbnb(address[] memory _path) external requireRole(ROLE_OWNER) {
         require(
             _path[0] == farmInfo.rewardToken && _path[_path.length - 1] == WBNB,
             "SweetVault: Incorrect path to WBNB"
@@ -522,7 +522,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         emit SetPathToWbnb(oldPath, pathToWbnb);
     }
 
-    function setPlatformFee(uint _platformFee) external requireRole(IAuthority.Role.OWNER) {
+    function setPlatformFee(uint _platformFee) external requireRole(ROLE_OWNER) {
         require(_platformFee <= platformFeeUL, "SweetVault: Platform fee too high");
 
         uint oldPlatformFee = platformFee;
@@ -532,7 +532,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         emit SetPlatformFee(oldPlatformFee, platformFee);
     }
 
-    function setEarlyWithdrawFee(uint _earlyWithdrawFee) external requireRole(IAuthority.Role.OWNER) {
+    function setEarlyWithdrawFee(uint _earlyWithdrawFee) external requireRole(ROLE_OWNER) {
         require(
             _earlyWithdrawFee <= earlyWithdrawFeeUL,
             "SweetVault: Early withdraw fee too high"
