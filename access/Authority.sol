@@ -24,7 +24,7 @@ contract Authority is IAuthority, ControlledUUPS {
     address public dao;
     address public rewardDistributor;
 
-    mapping(Role => mapping(address => bool)) public userRoles;
+    mapping(uint8 => mapping(address => bool)) public userRoles;
 
     function initialize(
         address _dao,
@@ -34,21 +34,21 @@ contract Authority is IAuthority, ControlledUUPS {
         address _manager,
         address _rewardDistributor
     ) public initializer {
-        _setRole(Role.DAO, _dao, true);
-        _setRole(Role.OWNER, _owner, true);
-        _setRole(Role.TREASURY, _treasury, true);
-        _setRole(Role.KEEPER, _keeper, true);
-        _setRole(Role.MANAGER, _manager, true);
-        _setRole(Role.REWARD_DISTRIBUTOR, _rewardDistributor, true);
+        _setRole(ROLE_DAO, _dao, true);
+        _setRole(ROLE_OWNER, _owner, true);
+        _setRole(ROLE_TREASURY, _treasury, true);
+        _setRole(ROLE_KEEPER, _keeper, true);
+        _setRole(ROLE_MANAGER, _manager, true);
+        _setRole(ROLE_REWARD_DISTRIBUTOR, _rewardDistributor, true);
 
         __ControlledUUPS_init(address(this));
     }
 
     function setRole(
-        Role _role,
+        uint8 _role,
         address _user,
         bool _active
-    ) external requireRole(Role.DAO) {
+    ) external requireRole(ROLE_DAO) {
         _setRole(_role, _user, _active);
     }
 
@@ -57,11 +57,11 @@ contract Authority is IAuthority, ControlledUUPS {
     }
 
     function _setRole(
-        Role _role,
+        uint8 _role,
         address _user,
         bool _active
     ) internal {
-        if (_role == Role.DAO) {
+        if (_role == ROLE_DAO) {
             require(
                 _user != address(0),
                 "Authority::_setRole: DAO cannot be zero address"
@@ -75,7 +75,7 @@ contract Authority is IAuthority, ControlledUUPS {
             dao = _user;
         }
 
-        if (_role == Role.TREASURY && _active) {
+        if (_role == ROLE_TREASURY && _active) {
             require(
                 _user != address(0),
                 "Authority::_setRole: Treasury cannot be zero address"
@@ -85,7 +85,7 @@ contract Authority is IAuthority, ControlledUUPS {
             treasury = _user;
         }
 
-        if (_role == Role.REWARD_DISTRIBUTOR && _active) {
+        if (_role == ROLE_REWARD_DISTRIBUTOR && _active) {
             require(
                 _user != address(0),
                 "Authority::_setRole: Reward distributor cannot be zero address"
