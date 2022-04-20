@@ -16,10 +16,11 @@
 
 pragma solidity 0.8.9;
 
+import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
 import "../interfaces/IAuthority.sol";
-import "./ControlledUUPS.sol";
+import "./Roles.sol";
 
-contract Authority is IAuthority, ControlledUUPS {
+contract Authority is IAuthority, UUPSUpgradeable, Roles {
     address public treasury;
     address public dao;
     address public rewardDistributor;
@@ -41,7 +42,7 @@ contract Authority is IAuthority, ControlledUUPS {
         _setRole(ROLE_MANAGER, _manager, true);
         _setRole(ROLE_REWARD_DISTRIBUTOR, _rewardDistributor, true);
 
-        __ControlledUUPS_init(address(this));
+        authority = IAuthority(address(this));
     }
 
     function setRole(
@@ -50,10 +51,6 @@ contract Authority is IAuthority, ControlledUUPS {
         bool _active
     ) external requireRole(ROLE_DAO) {
         _setRole(_role, _user, _active);
-    }
-
-    function setAuthority(address) external pure override {
-        revert("Authority::setAuthority: Can't change authority of Authority contract");
     }
 
     function _setRole(
@@ -99,4 +96,6 @@ contract Authority is IAuthority, ControlledUUPS {
 
         emit SetRole(_role, _user, _active);
     }
+
+    function _authorizeUpgrade(address) internal override requireRole(ROLE_DAO) {}
 }
