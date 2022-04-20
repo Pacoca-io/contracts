@@ -229,35 +229,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         _deposit(_currentBalance(stakedToken) - initialStakedTokenBalance);
     }
 
-    function zapWithPermitAndDeposit(
-        ZapInfo calldata _zapInfo,
-        address _inputToken,
-        uint _inputTokenAmount,
-        bytes calldata _signatureData
-    ) external nonReentrant {
-        address stakedToken = farmInfo.stakedToken;
-        uint initialStakedTokenBalance = _currentBalance(stakedToken);
-        uint initialInputTokenBalance = _currentBalance(_inputToken);
-
-        Permit.approve(_inputToken, _inputTokenAmount, _signatureData);
-
-        IERC20Upgradeable(_inputToken).safeTransferFrom(
-            address(msg.sender),
-            address(this),
-            _inputTokenAmount
-        );
-
-        IERC20Upgradeable(_inputToken).approve(zap, _inputTokenAmount);
-
-        IPeanutZap(zap).zapToken(
-            _zapInfo,
-            _inputToken,
-            _currentBalance(_inputToken) - initialInputTokenBalance
-        );
-
-        _deposit(_currentBalance(stakedToken) - initialStakedTokenBalance);
-    }
-
     function zapPairWithPermitAndDeposit(
         ZapPairInfo calldata _zapPairInfo,
         bytes calldata _signature
