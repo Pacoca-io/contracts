@@ -13,16 +13,9 @@
 **/
 
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
-import "./AccessControlledUpgraded.sol";
+import "./Test_AccessControlledUpgraded.sol";
 
-abstract contract ControlledUUPSUpgraded is UUPSUpgradeable, AccessControlledUpgraded {
-    function __ControlledUUPS_init(address _authority) public initializer {
-        __AccessControlled_init(_authority);
-    }
-
-    function _authorizeUpgrade(address) internal override requireRole(IAuthorityUpgraded.Role.DAO) {}
-}
+abstract contract Test_ControlledUUPSUpgraded is Test_AccessControlledUpgraded {}
