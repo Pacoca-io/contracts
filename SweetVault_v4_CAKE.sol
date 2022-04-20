@@ -53,6 +53,20 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
         return IERC20Upgradeable(CAKE).balanceOf(address(this));
     }
 
+    function _getExpectedOutput(
+        address[] memory _path
+    ) internal virtual view override returns (uint) {
+        uint rewards = _currentBalance(CAKE) + profit();
+
+        if (rewards == 0) {
+            return 0;
+        }
+
+        uint[] memory amounts = router.getAmountsOut(rewards, _path);
+
+        return amounts[amounts.length - 1];
+    }
+
     function profit() public view returns (uint) {
         ICakePool cakePool = ICakePool(CAKE_POOL);
 
