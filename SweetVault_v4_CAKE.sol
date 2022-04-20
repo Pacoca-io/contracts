@@ -28,6 +28,31 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
         ICakePool(CAKE_POOL).withdrawByAmount(profit());
     }
 
+    function _deposit(uint _amount) internal override {
+        UserInfo storage user = userInfo[msg.sender];
+
+        _approveTokenIfNeeded(
+            farmInfo.stakedToken,
+            type(uint).max,
+            CAKE_POOL
+        );
+
+        ICakePool(CAKE_POOL).deposit(_amount, 0);
+
+        _updateAutoPacocaShares(user);
+        user.stake = user.stake + _amount;
+        _updateRewardDebt(user);
+        user.lastDepositedTime = block.timestamp;
+
+        emit Deposit(msg.sender, _amount);
+    }
+
+    function _withdrawUnderlying(uint _amount) internal override {
+        // TODO withdraw must consider the difference caused by the withdraw fee
+
+        ICakePool(CAKE_POOL).withdrawByAmount(_amount);
+    }
+
     function profit() public view returns (uint) {
         ICakePool cakePool = ICakePool(CAKE_POOL);
 
