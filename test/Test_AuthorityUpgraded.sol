@@ -16,10 +16,7 @@
 pragma solidity 0.8.9;
 
 import "../access/Authority.sol";
-import "./Test_ControlledUUPSUpgraded.sol";
+import "./Test_RolesUpgraded.sol";
 
-contract Test_AuthorityUpgraded is Test_ControlledUUPSUpgraded, Authority {
-    function setAuthority(address) external pure override(AccessControlled, Authority) {
-        revert("Authority::setAuthority: Can't change authority of Authority contract");
-    }
+contract Test_AuthorityUpgraded is Test_RolesUpgraded, Authority {
 }
