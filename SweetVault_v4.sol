@@ -302,9 +302,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         require(_amount > 0, "SweetVault: amount must be greater than zero");
         require(user.stake >= _amount, "SweetVault: withdraw amount exceeds balance");
 
-        _withdrawUnderlying(_amount);
-
-        uint currentAmount = _amount;
+        uint currentAmount = _withdrawUnderlying(_amount);
 
         if (block.timestamp < user.lastDepositedTime + withdrawFeePeriod) {
             uint currentWithdrawFee = (currentAmount * earlyWithdrawFee) / 10000;
@@ -330,10 +328,12 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         emit Withdraw(msg.sender, currentAmount);
     }
 
-    function _withdrawUnderlying(uint _amount) internal virtual {
+    function _withdrawUnderlying(uint _amount) internal virtual returns (uint) {
         FarmInfo memory _farmInfo = farmInfo;
 
         IFarm(_farmInfo.farm).withdraw(_farmInfo.pid, _amount);
+
+        return _amount;
     }
 
     function claimRewards(uint _shares) external nonReentrant {

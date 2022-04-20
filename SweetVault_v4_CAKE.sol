@@ -47,10 +47,10 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
         emit Deposit(msg.sender, _amount);
     }
 
-    function _withdrawUnderlying(uint _amount) internal override {
-        // TODO withdraw must consider the difference caused by the withdraw fee
-
+    function _withdrawUnderlying(uint _amount) internal override returns (uint) {
         ICakePool(CAKE_POOL).withdrawByAmount(_amount);
+
+        return IERC20Upgradeable(CAKE).balanceOf(address(this));
     }
 
     function profit() public view returns (uint) {
