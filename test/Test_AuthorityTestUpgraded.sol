@@ -16,9 +16,9 @@
 pragma solidity 0.8.9;
 
 import "./Test_AuthorityTest.sol";
-import "./Test_ControlledUUPSUpgraded.sol";
+import "./Test_RolesUpgraded.sol";
 
-contract Test_AuthorityTestUpgraded is Test_AuthorityTest, Test_ControlledUUPSUpgraded {
+contract Test_AuthorityTestUpgraded is Test_AuthorityTest, Test_RolesUpgraded {
     function onlyTestRole() public requireRole(ROLE_TEST) {
         emit Called('onlyTestRole');
     }

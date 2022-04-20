@@ -13,12 +13,11 @@
 **/
 
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/Initializable.sol";
-import "../access/AccessControlled.sol";
-import "./Test_RolesUpgraded.sol";
+import "../access/Roles.sol";
 
-abstract contract Test_AccessControlledUpgraded is Test_RolesUpgraded, AccessControlled {
-
+abstract contract Test_RolesUpgraded is Roles {
+    uint8 constant internal ROLE_TEST = 6;
 }
