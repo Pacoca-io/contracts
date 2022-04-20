@@ -19,4 +19,9 @@ import "../access/Authority.sol";
 import "./Test_RolesUpgraded.sol";
 
 contract Test_AuthorityUpgraded is Test_RolesUpgraded, Authority {
+    uint constant public upgradeTest = 123;
+
+    function test() public pure returns (uint) {
+        return 4;
+    }
 }
