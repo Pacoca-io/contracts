@@ -25,7 +25,7 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
     uint internal _totalStake;
 
     function harvest() internal override {
-        ICakePool(CAKE_POOL).withdrawByAmount(profitInShares());
+        ICakePool(CAKE_POOL).withdraw(profitInShares());
     }
 
     function _deposit(uint _amount) internal override {

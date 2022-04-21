@@ -19,6 +19,8 @@ pragma solidity 0.8.9;
 interface ICakePool {
     function deposit(uint256 _amount, uint256 _lockDuration) external;
 
+    function withdraw(uint256 _shares) external;
+
     function withdrawByAmount(uint256 _amount) external;
 
     function getPricePerFullShare() external view returns (uint);
