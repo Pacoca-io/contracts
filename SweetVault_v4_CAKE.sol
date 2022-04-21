@@ -25,7 +25,14 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
     uint internal _totalStake;
 
     function harvest() internal override {
-        ICakePool(CAKE_POOL).withdraw(profitInShares());
+        ICakePool(CAKE_POOL).withdrawByAmount(_preventUnderflow(profit()));
+
+        (uint currentShares, , , , , , , ,) = ICakePool(CAKE_POOL).userInfo(address(this));
+
+        require(
+            _sharesToCake(currentShares) >= _totalStake,
+            "harvest:: Insufficient balance"
+        );
     }
 
     function _deposit(uint _amount) internal override {
@@ -45,7 +52,7 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
         // TODO if this fails use shares as stake instead of token amount
         (uint currentShares, , , , , , , ,) = cakePool.userInfo(address(this));
 
-        uint depositValue = _sharesValue(currentShares - initialShares);
+        uint depositValue = _sharesToCake(currentShares - initialShares);
 
         _totalStake = _totalStake + depositValue;
 
@@ -84,20 +91,21 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
     function profit() public view returns (uint) {
         ICakePool cakePool = ICakePool(CAKE_POOL);
 
-        (uint shares, , , , , , , ,) = cakePool.userInfo(address(this));
+        (uint totalShares, , , , , , , ,) = cakePool.userInfo(address(this));
 
-        return _sharesValue(shares) - _totalStake;
-    }
-
-    function profitInShares() public view returns (uint) {
-        return profit() * 1e18 / ICakePool(CAKE_POOL).getPricePerFullShare();
+        return _sharesToCake(totalShares) - _totalStake;
     }
 
     function totalStake() public view override returns (uint) {
         return _totalStake;
     }
 
-    function _sharesValue(uint shares) internal view returns (uint) {
+    function _sharesToCake(uint shares) internal view returns (uint cake) {
         return shares * ICakePool(CAKE_POOL).getPricePerFullShare() / 1e18;
+    }
+
+    // Removes about 2% to prevent underflow from PancakeSwap's fees
+    function _preventUnderflow(uint _amount) internal pure returns (uint) {
+        return _amount - (_amount * 10_000 / 499_999);
     }
 }
