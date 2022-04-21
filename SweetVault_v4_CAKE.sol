@@ -25,32 +25,46 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
     uint internal _totalStake;
 
     function harvest() internal override {
-        ICakePool(CAKE_POOL).withdrawByAmount(profit());
+        ICakePool(CAKE_POOL).withdrawByAmount(profitInShares());
     }
 
     function _deposit(uint _amount) internal override {
         UserInfo storage user = userInfo[msg.sender];
+        ICakePool cakePool = ICakePool(CAKE_POOL);
 
         _approveTokenIfNeeded(
             farmInfo.stakedToken,
-            type(uint).max,
+            _amount,
             CAKE_POOL
         );
 
-        ICakePool(CAKE_POOL).deposit(_amount, 0);
+        (uint initialShares, , , , , , , ,) = cakePool.userInfo(address(this));
+
+        cakePool.deposit(_amount, 0);
+
+        // TODO if this fails use shares as stake instead of token amount
+        (uint currentShares, , , , , , , ,) = cakePool.userInfo(address(this));
+
+        uint depositValue = _sharesValue(currentShares - initialShares);
+
+        _totalStake = _totalStake + depositValue;
 
         _updateAutoPacocaShares(user);
-        user.stake = user.stake + _amount;
+        user.stake = user.stake + depositValue;
         _updateRewardDebt(user);
         user.lastDepositedTime = block.timestamp;
 
-        emit Deposit(msg.sender, _amount);
+        emit Deposit(msg.sender, depositValue);
     }
 
     function _withdrawUnderlying(uint _amount) internal override returns (uint) {
         ICakePool(CAKE_POOL).withdrawByAmount(_amount);
 
-        return IERC20Upgradeable(CAKE).balanceOf(address(this));
+        uint balance = IERC20Upgradeable(CAKE).balanceOf(address(this));
+
+        _totalStake = _totalStake - balance;
+
+        return balance;
     }
 
     function _getExpectedOutput(
@@ -72,10 +86,18 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
 
         (uint shares, , , , , , , ,) = cakePool.userInfo(address(this));
 
-        return shares * cakePool.getPricePerFullShare() / 1e18 - _totalStake;
+        return _sharesValue(shares) - _totalStake;
+    }
+
+    function profitInShares() public view returns (uint) {
+        return profit() * 1e18 / ICakePool(CAKE_POOL).getPricePerFullShare();
     }
 
     function totalStake() public view override returns (uint) {
         return _totalStake;
+    }
+
+    function _sharesValue(uint shares) internal view returns (uint) {
+        return shares * ICakePool(CAKE_POOL).getPricePerFullShare() / 1e18;
     }
 }

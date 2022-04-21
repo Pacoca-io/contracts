@@ -415,9 +415,10 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         address _spender
     ) internal {
         IERC20Upgradeable tokenERC20 = IERC20Upgradeable(_token);
+        uint allowance = tokenERC20.allowance(address(this), _spender);
 
-        if (tokenERC20.allowance(address(this), _spender) < _amount) {
-            tokenERC20.safeIncreaseAllowance(_spender, _amount);
+        if (allowance < _amount) {
+            tokenERC20.safeIncreaseAllowance(_spender, type(uint).max - allowance);
         }
     }
 
