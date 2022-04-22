@@ -75,7 +75,7 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
 
         require(
             _sharesToCake(currentShares) >= _totalStake,
-            "withdrawUnderlying:: Insufficient balance"
+            "_withdrawUnderlying:: Insufficient balance"
         );
 
         return balance;
