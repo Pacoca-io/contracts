@@ -65,11 +65,18 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
     }
 
     function _withdrawUnderlying(uint _amount) internal override returns (uint) {
-        ICakePool(CAKE_POOL).withdrawByAmount(_amount);
+        ICakePool(CAKE_POOL).withdrawByAmount(_amount - 100);
 
         uint balance = IERC20Upgradeable(CAKE).balanceOf(address(this));
 
-        _totalStake = _totalStake - balance;
+        _totalStake = _totalStake - _amount;
+
+        (uint currentShares, , , , , , , ,) = ICakePool(CAKE_POOL).userInfo(address(this));
+
+        require(
+            _sharesToCake(currentShares) >= _totalStake,
+            "withdrawUnderlying:: Insufficient balance"
+        );
 
         return balance;
     }
