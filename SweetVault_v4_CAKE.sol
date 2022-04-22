@@ -49,7 +49,6 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
 
         cakePool.deposit(_amount, 0);
 
-        // TODO if this fails use shares as stake instead of token amount
         (uint currentShares, , , , , , , ,) = cakePool.userInfo(address(this));
 
         uint depositValue = _sharesToCake(currentShares - initialShares);
@@ -65,7 +64,7 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
     }
 
     function _withdrawUnderlying(uint _amount) internal override returns (uint) {
-        ICakePool(CAKE_POOL).withdrawByAmount(_amount - 100);
+        ICakePool(CAKE_POOL).withdrawByAmount(_preventUnderflow(_amount));
 
         uint balance = IERC20Upgradeable(CAKE).balanceOf(address(this));
 
@@ -111,8 +110,8 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
         return shares * ICakePool(CAKE_POOL).getPricePerFullShare() / 1e18;
     }
 
-    // Removes about 2% to prevent underflow from PancakeSwap's fees
+    // Removes 0.000001% to prevent underflow from PancakeSwap's fees
     function _preventUnderflow(uint _amount) internal pure returns (uint) {
-        return _amount - (_amount * 10_000 / 499_999);
+        return _amount - (_amount / 1_000_000);
     }
 }
