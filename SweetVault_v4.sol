@@ -128,13 +128,13 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         uint _minPlatformOutput,
         uint _minPacocaOutput
     ) external virtual requireRole(ROLE_KEEPER) {
-        FarmInfo memory _farmInfo = farmInfo;
+        address rewardToken = farmInfo.rewardToken;
 
-        IFarm(_farmInfo.farm).withdraw(_farmInfo.pid, 0);
+        harvest();
 
         // Collect platform fees
         _swap(
-            _currentBalance(_farmInfo.rewardToken) * platformFee / 10000,
+            _currentBalance(rewardToken) * platformFee / 10000,
             _minPlatformOutput,
             pathToWbnb,
             authority.rewardDistributor()
@@ -142,7 +142,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
         // Convert remaining rewards to PACOCA
         _swap(
-            _currentBalance(_farmInfo.rewardToken),
+            _currentBalance(rewardToken),
             _minPacocaOutput,
             pathToPacoca,
             address(this)
@@ -165,6 +165,12 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         accSharesPerStakedToken = accSharesPerStakedToken + (newShares * 1e18 / totalStake());
 
         emit Earn(pacocaBalance);
+    }
+
+    function harvest() internal virtual {
+        FarmInfo memory _farmInfo = farmInfo;
+
+        IFarm(_farmInfo.farm).withdraw(_farmInfo.pid, 0);
     }
 
     function deposit(uint _amount) external nonReentrant {
@@ -264,13 +270,13 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         _deposit(_currentBalance(_zapPairInfo.outputToken) - outputPairInitialBalance);
     }
 
-    function _deposit(uint _amount) private {
+    function _deposit(uint _amount) internal virtual {
         UserInfo storage user = userInfo[msg.sender];
         FarmInfo memory _farmInfo = farmInfo;
 
         _approveTokenIfNeeded(
             _farmInfo.stakedToken,
-            _amount,
+            type(uint).max,
             _farmInfo.farm
         );
 
@@ -291,19 +297,17 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
 
     function withdraw(uint _amount) external virtual nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
-        FarmInfo memory _farmInfo = farmInfo;
+        address stakedToken = farmInfo.stakedToken;
 
         require(_amount > 0, "SweetVault: amount must be greater than zero");
         require(user.stake >= _amount, "SweetVault: withdraw amount exceeds balance");
 
-        IFarm(_farmInfo.farm).withdraw(_farmInfo.pid, _amount);
-
-        uint currentAmount = _amount;
+        uint currentAmount = _withdrawUnderlying(_amount);
 
         if (block.timestamp < user.lastDepositedTime + withdrawFeePeriod) {
             uint currentWithdrawFee = (currentAmount * earlyWithdrawFee) / 10000;
 
-            IERC20Upgradeable(_farmInfo.stakedToken).safeTransfer(authority.treasury(), currentWithdrawFee);
+            IERC20Upgradeable(stakedToken).safeTransfer(authority.treasury(), currentWithdrawFee);
 
             currentAmount = currentAmount - currentWithdrawFee;
 
@@ -319,9 +323,17 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
             _claimRewards(user.autoPacocaShares, false);
         }
 
-        IERC20Upgradeable(_farmInfo.stakedToken).safeTransfer(msg.sender, currentAmount);
+        IERC20Upgradeable(stakedToken).safeTransfer(msg.sender, currentAmount);
 
         emit Withdraw(msg.sender, currentAmount);
+    }
+
+    function _withdrawUnderlying(uint _amount) internal virtual returns (uint) {
+        FarmInfo memory _farmInfo = farmInfo;
+
+        IFarm(_farmInfo.farm).withdraw(_farmInfo.pid, _amount);
+
+        return _amount;
     }
 
     function claimRewards(uint _shares) external nonReentrant {
@@ -403,9 +415,10 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         address _spender
     ) internal {
         IERC20Upgradeable tokenERC20 = IERC20Upgradeable(_token);
+        uint allowance = tokenERC20.allowance(address(this), _spender);
 
-        if (tokenERC20.allowance(address(this), _spender) < _amount) {
-            tokenERC20.safeIncreaseAllowance(_spender, _amount);
+        if (allowance < _amount) {
+            tokenERC20.safeIncreaseAllowance(_spender, type(uint).max - allowance);
         }
     }
 
@@ -413,7 +426,7 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         return IERC20Upgradeable(_token).balanceOf(address(this));
     }
 
-    function totalStake() public view returns (uint) {
+    function totalStake() public view virtual returns (uint) {
         FarmInfo memory _farmInfo = farmInfo;
 
         return IFarm(_farmInfo.farm).userInfo(_farmInfo.pid, address(this));
@@ -457,13 +470,13 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         );
     }
 
-    function _updateAutoPacocaShares(UserInfo storage _user) private {
+    function _updateAutoPacocaShares(UserInfo storage _user) internal {
         uint totalSharesEarned = (_user.stake * accSharesPerStakedToken) / 1e18;
 
         _user.autoPacocaShares = _user.autoPacocaShares + totalSharesEarned - _user.rewardDebt;
     }
 
-    function _updateRewardDebt(UserInfo storage _user) private {
+    function _updateRewardDebt(UserInfo storage _user) internal {
         _user.rewardDebt = (_user.stake * accSharesPerStakedToken) / 1e18;
     }
 

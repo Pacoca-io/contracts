@@ -13,15 +13,17 @@
 **/
 
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.9;
 
-import "../access/Authority.sol";
-import "./Test_RolesUpgraded.sol";
+interface ICakePool {
+    function deposit(uint256 _amount, uint256 _lockDuration) external;
 
-contract Test_AuthorityUpgraded is Test_RolesUpgraded, Authority {
-    uint constant public upgradeTest = 123;
+    function withdraw(uint256 _shares) external;
 
-    function test() public pure returns (uint) {
-        return 4;
-    }
+    function withdrawByAmount(uint256 _amount) external;
+
+    function getPricePerFullShare() external view returns (uint);
+
+    function userInfo(address _user) external view returns (uint, uint, uint, uint, uint, uint, uint, bool, uint);
 }
