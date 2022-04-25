@@ -24,7 +24,7 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
     address constant public CAKE = 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82;
     uint internal _totalStake;
 
-    function harvest() internal override {
+    function harvest() internal virtual override {
         ICakePool(CAKE_POOL).withdrawByAmount(_preventUnderflow(profit()));
 
         (uint currentShares, , , , , , , ,) = ICakePool(CAKE_POOL).userInfo(address(this));
