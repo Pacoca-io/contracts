@@ -40,7 +40,6 @@ contract ZapHelpers is IZapStructs {
         return IERC20(_token).balanceOf(address(this));
     }
 
-    // TODO: Add pure back again
     function _calculateUnZapProfit(
         uint _initialBalance,
         uint _currentBalance,
