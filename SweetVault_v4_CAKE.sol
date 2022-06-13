@@ -19,6 +19,8 @@ pragma solidity 0.8.9;
 import "./SweetVault_v4.sol";
 import "./interfaces/ICakePool.sol";
 
+import "hardhat/console.sol";
+
 contract SweetVault_v4_CAKE is SweetVault_v4 {
     address constant public CAKE_POOL = 0x45c54210128a065de780C4B0Df3d16664f7f859e;
     address constant public CAKE = 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82;
@@ -28,6 +30,12 @@ contract SweetVault_v4_CAKE is SweetVault_v4 {
         ICakePool(CAKE_POOL).withdrawByAmount(_preventUnderflow(profit()));
 
         (uint currentShares, , , , , , , ,) = ICakePool(CAKE_POOL).userInfo(address(this));
+
+        console.log(
+            "cake shares %s .... totalStake %s",
+            _sharesToCake(currentShares),
+            _totalStake
+        );
 
         require(
             _sharesToCake(currentShares) >= _totalStake,

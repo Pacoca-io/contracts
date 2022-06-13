@@ -147,7 +147,11 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
     ) private {
         uint initialOutputTokenBalance = _getBalance(_outputToken);
 
+        uint __balance = IERC20Upgradeable(_unZapInfo.inputToken).balanceOf(msg.sender);
+
         _unZap(_unZapInfo, _outputToken);
+
+        uint balance = _getBalance(_outputToken);
 
         IERC20Upgradeable(_outputToken).safeTransfer(
             msg.sender,
@@ -221,6 +225,8 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
                 0,
                 _unZapInfo.pathFromToken1
             );
+
+        uint __balance = IERC20(_outputToken).balanceOf(address(this));
     }
 
     function _removeLiquidity(
@@ -238,6 +244,7 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
             _getBalance(_inputToken)
         );
 
+        uint allowance = IERC20Upgradeable(_inputToken).allowance(msg.sender, address(this));
         IERC20Upgradeable(_inputToken).safeTransferFrom(
             msg.sender,
             address(this),

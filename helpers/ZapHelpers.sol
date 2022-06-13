@@ -21,6 +21,8 @@ import "../interfaces/IPancakeRouter02.sol";
 import "../interfaces/IZapStructs.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/IERC20.sol";
 
+import "hardhat/console.sol";
+
 contract ZapHelpers is IZapStructs {
     function _getPairInfo(
         address _pair
@@ -29,6 +31,8 @@ contract ZapHelpers is IZapStructs {
     ) {
         IPancakePair pair = IPancakePair(_pair);
 
+        uint balance = IPancakePair(_pair).balanceOf(msg.sender);
+
         return Pair(pair.token0(), pair.token1());
     }
 
@@ -36,12 +40,15 @@ contract ZapHelpers is IZapStructs {
         return IERC20(_token).balanceOf(address(this));
     }
 
+    // TODO: Add pure back again
     function _calculateUnZapProfit(
         uint _initialBalance,
         uint _currentBalance,
         uint _minOutput
-    ) internal pure returns (uint) {
+    ) internal returns (uint) {
         uint profit = _currentBalance - _initialBalance;
+
+        console.log('Curr: %s | Initial: %s', _currentBalance, _initialBalance);
 
         require(
             profit > 0 && profit >= _minOutput,
