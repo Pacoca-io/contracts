@@ -28,6 +28,8 @@ import "./helpers/PeanutRouter.sol";
 import "./helpers/ZapHelpers.sol";
 import "./helpers/Permit.sol";
 
+import "hardhat/console.sol";
+
 contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, ZapHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -147,11 +149,7 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
     ) private {
         uint initialOutputTokenBalance = _getBalance(_outputToken);
 
-        uint __balance = IERC20Upgradeable(_unZapInfo.inputToken).balanceOf(msg.sender);
-
         _unZap(_unZapInfo, _outputToken);
-
-        uint balance = _getBalance(_outputToken);
 
         IERC20Upgradeable(_outputToken).safeTransfer(
             msg.sender,
@@ -192,7 +190,11 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
             _unZapInfo.minOutputTokenAmount
         );
 
+        console.log('Balance before: %s | Profit: %s', address(this).balance, profit);
+
         wNATIVE.withdraw(profit);
+
+        console.log('Balance after: %s ', address(this).balance);
 
         payable(msg.sender).transfer(profit);
     }
@@ -244,7 +246,6 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
             _getBalance(_inputToken)
         );
 
-        uint allowance = IERC20Upgradeable(_inputToken).allowance(msg.sender, address(this));
         IERC20Upgradeable(_inputToken).safeTransferFrom(
             msg.sender,
             address(this),

@@ -45,10 +45,8 @@ contract ZapHelpers is IZapStructs {
         uint _initialBalance,
         uint _currentBalance,
         uint _minOutput
-    ) internal returns (uint) {
+    ) internal pure returns (uint) {
         uint profit = _currentBalance - _initialBalance;
-
-        console.log('Curr: %s | Initial: %s', _currentBalance, _initialBalance);
 
         require(
             profit > 0 && profit >= _minOutput,
