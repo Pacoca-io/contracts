@@ -96,16 +96,5 @@ contract SweetVault_v6 is SweetVault_v5 {
         emit Withdraw(msg.sender, currentAmount);
     }
 
-    function _getWithdrawInfo(
-        uint _lastDepositedTime,
-        uint _amount
-    ) public view returns (uint withdrawFee, uint withdrawAmount) {
-        withdrawFee = block.timestamp < _lastDepositedTime + withdrawFeePeriod
-            ? (_amount * earlyWithdrawFee) / 10000
-            : 0;
-
-        withdrawAmount = _amount - withdrawFee;
-    }
-
     receive() external payable {}
 }
