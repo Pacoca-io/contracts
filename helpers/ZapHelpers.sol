@@ -21,8 +21,6 @@ import "../interfaces/IPancakeRouter02.sol";
 import "../interfaces/IZapStructs.sol";
 import "@openzeppelin/contracts-v4/token/ERC20/IERC20.sol";
 
-import "hardhat/console.sol";
-
 contract ZapHelpers is IZapStructs {
     function _getPairInfo(
         address _pair

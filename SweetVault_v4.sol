@@ -295,7 +295,6 @@ contract SweetVault_v4 is ISweetVault, IZapStructs, ControlledUUPS, ReentrancyGu
         IFarm(farmInfo.farm).deposit(farmInfo.pid, _amount);
     }
 
-    // TODO: check if we can make this function public instead of external
     function withdraw(uint _amount) external virtual nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
         address stakedToken = farmInfo.stakedToken;

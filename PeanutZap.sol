@@ -221,8 +221,6 @@ contract PeanutZap is IPeanutZap, UUPSUpgradeable, OwnableUpgradeable, Reentranc
                 0,
                 _unZapInfo.pathFromToken1
             );
-
-        uint __balance = IERC20(_outputToken).balanceOf(address(this));
     }
 
     function _removeLiquidity(
