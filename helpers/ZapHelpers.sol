@@ -29,8 +29,6 @@ contract ZapHelpers is IZapStructs {
     ) {
         IPancakePair pair = IPancakePair(_pair);
 
-        uint balance = IPancakePair(_pair).balanceOf(msg.sender);
-
         return Pair(pair.token0(), pair.token1());
     }
 
