@@ -242,7 +242,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
             (bool compoundNeeded, uint platformOutput, uint keeperOutput, uint burnOutput, uint pacocaOutput) = checkCompound(vault);
 
-            if (compoundNeeded) {
+            if (compoundNeeded && pacocaOutput > 0) {
                 return (true, abi.encode(
                     VaultType.SWEET,
                     vault,
@@ -268,7 +268,7 @@ contract SweetKeeper is OwnableUpgradeable, KeeperCompatibleInterface {
 
             (bool compoundNeeded, uint platformOutput, , , uint pacocaOutput) = checkCompound(vault);
 
-            if (compoundNeeded) {
+            if (compoundNeeded && pacocaOutput > 0) {
                 uint zero = uint(0);
 
                 return (true, abi.encode(
