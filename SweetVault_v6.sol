@@ -22,8 +22,6 @@ import "./SweetVault_v5.sol";
 contract SweetVault_v6 is SweetVault_v5 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    event NativeTransfer(address to, uint amount);
-
     function withdrawAndUnZap(
         UnZapInfo memory _unZapInfo,
         address _outputToken
@@ -45,8 +43,6 @@ contract SweetVault_v6 is SweetVault_v5 {
             IPeanutZap(zap).unZapNative(_unZapInfo);
 
             payable(msg.sender).transfer(address(this).balance - initialOutputTokenBalance);
-
-            emit NativeTransfer(msg.sender, address(this).balance - initialOutputTokenBalance);
         } else {
             uint initialOutputTokenBalance = _currentBalance(_outputToken);
 
