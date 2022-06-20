@@ -25,15 +25,14 @@ contract SweetVault_v6 is SweetVault_v5 {
     function withdrawAndUnZap(
         UnZapInfo memory _unZapInfo,
         address _outputToken
-    ) external virtual {
+    ) external virtual nonReentrant {
         uint initialStakedTokenBalance = _currentBalance(_unZapInfo.inputToken);
 
         _withdraw(_unZapInfo.inputTokenAmount, address(this));
 
         uint profit = _currentBalance(_unZapInfo.inputToken) - initialStakedTokenBalance;
 
-        IERC20Upgradeable(_unZapInfo.inputToken)
-            .approve(zap, profit);
+        IERC20Upgradeable(_unZapInfo.inputToken).approve(zap, profit);
 
         _unZapInfo.inputTokenAmount = profit;
 
@@ -55,7 +54,7 @@ contract SweetVault_v6 is SweetVault_v5 {
         }
     }
 
-    function withdraw(uint _amount) external override virtual {
+    function withdraw(uint _amount) external override virtual nonReentrant {
         _withdraw(_amount, msg.sender);
     }
 
