@@ -90,14 +90,14 @@ contract PeanutDCA is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         _withdraw(_amount,  _poolId);
     }
 
-    function swap(address[] calldata pools) external onlyOwner nonReentrant {
-        for (uint8 i = 0; i < pools.length; i++) {
+    function swap(uint[] calldata _poolIds) external onlyOwner nonReentrant {
+        for (uint8 i = 0; i < _poolIds.length; i++) {
             PoolInfo memory pool = poolInfo[i];
 
             IPancakeRouter02(pool.router).swapExactTokensForTokens(
                 pool.totalAmountToSwap,
                 0, // TODO: consider slippage,
-                pool.path, // TODO: find optimal way to pass the route to this function
+                pool.path,
                 address(this),
                 block.timestamp
             );
