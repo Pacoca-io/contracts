@@ -17,16 +17,19 @@ pragma solidity 0.8.9;
 **/
 
 import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "./access/ControlledUUPS.sol";
+import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable-v4/access/OwnableUpgradeable.sol";
 import "./interfaces/IPancakeRouter02.sol";
 
-contract ExchangeManager is ControlledUUPS {
+contract ExchangeManager is UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     function initialize(
-        address _authority
+        address _owner
     ) public initializer {
-        __ControlledUUPS_init(_authority);
+        __Ownable_init();
+
+        transferOwnership(_owner);
     }
 
     // TODO improve path
@@ -36,7 +39,7 @@ contract ExchangeManager is ControlledUUPS {
         address _router,
         address _wantToken,
         address _to
-    ) public requireRole(ROLE_TREASURY) {
+    ) public onlyOwner {
         for (uint256 index = 0; index < _tokens.length; ++index) {
             address fromToken = _tokens[index];
             uint balance = IERC20Upgradeable(fromToken).balanceOf(address(this));
@@ -92,4 +95,6 @@ contract ExchangeManager is ControlledUUPS {
 
         return path;
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }
