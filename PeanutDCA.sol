@@ -22,7 +22,7 @@ import "@openzeppelin/contracts-upgradeable-v4/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable-v4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "./libraries/PacocaRouterLibrary.sol";
+import "./libraries/UniswapV2Library.sol";
 import "./interfaces/IPancakeRouter02.sol";
 
 import "hardhat/console.sol";
