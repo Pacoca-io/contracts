@@ -56,8 +56,11 @@ contract PeanutDCA is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
     // user => position
     mapping(address => PositionInfo[]) internal _positionInfo;
 
-    // pid => swap number => delta
+    // pid => swap offset => delta
     mapping(uint => mapping(uint => uint)) internal _poolDelta;
+
+    // pid => swap offset => accumulated ratio
+    mapping(uint => mapping(uint => uint)) internal _accumlatedRatio;
 
     PoolInfo[] public poolInfo;
 
@@ -116,6 +119,23 @@ contract PeanutDCA is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         IERC20Upgradeable(pool.inputToken).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
+    function swap(uint[] calldata _pids) external onlyOwner nonReentrant {
+        // TODO: use a smaller uint type to save gas
+        for (uint32 pid = 0; i < _pids; pid++) {
+            PoolInfo memory pool = pids[pid];
+
+            IPancakeRouter02(pool.router).swapExactTokensForTokens(
+                pool.nextSwapAmount,
+                0, // TODO: consider slippage
+                pool.path,
+                address(this),
+                block.timestamp
+            );
+
+            quote
+        }
+    }
+
     function getPosition(address _user, uint _positionId) external view returns (PositionInfo memory) {
         return _positionInfo[_user][_positionId];
     }
@@ -133,6 +153,13 @@ contract PeanutDCA is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         return poolInfo.length;
     }
 
+    function _calculateRatio(
+        address _token0,
+        address _token1,
+        address factory
+    ) internal view returns (uint) {
+
+    }
 
     //  --------------------
     // | INTERNAL FUNCTIONS |
@@ -161,7 +188,7 @@ contract PeanutDCA is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         poolInfo[_pid].nextSwapAmount += _rate;
     }
 
-    function _increasePoolDelta(uint _pid, uint _finalSwap, uint _rate) internal {
+    function _increasePoolDelta(uint _pid, uint _rate, uint _finalSwap) internal {
         _poolDelta[_pid][_finalSwap] += _rate;
     }
 
